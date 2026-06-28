@@ -2414,21 +2414,21 @@ function TimerRing({ progress, type }) {
 
 function StudyTimer({ onBumpActivity }) {
   const saved = loadTimerState();
-  const [screen, setScreen] = React.useState(saved?.screen || "setup");
-  const [inputMins, setInputMins] = React.useState(saved?.inputMins || "45");
-  const [phases, setPhases] = React.useState(saved?.phases || []);
-  const [phaseIdx, setPhaseIdx] = React.useState(saved?.phaseIdx || 0);
-  const [timeLeft, setTimeLeft] = React.useState(saved?.timeLeft || 0);
-  const [running, setRunning] = React.useState(false);
-  const [timerStats, setTimerStats] = React.useState(loadTimerStats);
-  const tickRef = React.useRef(null);
-  const prevTimeRef = React.useRef(null);
+  const [screen, setScreen] = useState(saved?.screen || "setup");
+  const [inputMins, setInputMins] = useState(saved?.inputMins || "45");
+  const [phases, setPhases] = useState(saved?.phases || []);
+  const [phaseIdx, setPhaseIdx] = useState(saved?.phaseIdx || 0);
+  const [timeLeft, setTimeLeft] = useState(saved?.timeLeft || 0);
+  const [running, setRunning] = useState(false);
+  const [timerStats, setTimerStats] = useState(loadTimerStats);
+  const tickRef = useRef(null);
+  const prevTimeRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     saveTimerState({ screen, inputMins, phases, phaseIdx, timeLeft });
   }, [screen, inputMins, phases, phaseIdx, timeLeft]);
 
-  const advance = React.useCallback(() => {
+  const advance = useCallback(() => {
     setPhaseIdx(prev => {
       const next = prev + 1;
       if (next >= phases.length) {
@@ -2446,7 +2446,7 @@ function StudyTimer({ onBumpActivity }) {
     });
   }, [phases, onBumpActivity]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!running) { clearInterval(tickRef.current); return; }
     prevTimeRef.current = Date.now();
     tickRef.current = setInterval(() => {
@@ -2486,7 +2486,7 @@ function StudyTimer({ onBumpActivity }) {
 
   return (
     <motion.div variants={fadeSlideUp} initial="hidden" animate="show"
-      style={{ maxWidth: 440, margin: "0 auto", padding: "8px 0", background: "#010409", minHeight: "100%" }}>
+      style={{ maxWidth: 440, margin: "0 auto", padding: "8px 0" }}>
 
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: "#E6EDF3" }}>⏱ Study Timer</div>
@@ -2786,7 +2786,7 @@ export default function App() {
       )}
 
       {/* Main content */}
-      <div className="main-offset" style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: "#010409", minHeight: "100vh" }}>
+      <div className="main-offset" style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Topbar */}
         <header style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(1,4,9,.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #21262D", padding: "11px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <button className="hamburger" onClick={() => setSidebarOpen(true)}
@@ -2808,7 +2808,7 @@ export default function App() {
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "16px", background: "#010409" }}>
+        <main style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
           {selected
             ? <ProblemDetail problem={selected} progress={progress} onBack={() => setSelected(null)} onUpdate={updateProgress} onActivity={bumpActivityState} />
             : page === "dashboard" ? <Dashboard progress={progress} activity={activity} settings={settings} onSetDailyGoal={setDailyGoal} onNavigate={navigate} onImport={handleImport} onSelectProblem={p => setSelected(p)} onQuickPractice={startQuickPractice} />
