@@ -2486,7 +2486,7 @@ function StudyTimer({ onBumpActivity }) {
 
   return (
     <motion.div variants={fadeSlideUp} initial="hidden" animate="show"
-      style={{ maxWidth: 440, margin: "0 auto", padding: "8px 0" }}>
+      style={{ maxWidth: 440, margin: "0 auto", padding: "8px 0", background: "#010409", minHeight: "100%" }}>
 
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: "#E6EDF3" }}>⏱ Study Timer</div>
@@ -2786,7 +2786,7 @@ export default function App() {
       )}
 
       {/* Main content */}
-      <div className="main-offset" style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div className="main-offset" style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: "#010409", minHeight: "100vh" }}>
         {/* Topbar */}
         <header style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(1,4,9,.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #21262D", padding: "11px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <button className="hamburger" onClick={() => setSidebarOpen(true)}
@@ -2808,7 +2808,7 @@ export default function App() {
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        <main style={{ flex: 1, overflowY: "auto", padding: "16px", background: "#010409" }}>
           {selected
             ? <ProblemDetail problem={selected} progress={progress} onBack={() => setSelected(null)} onUpdate={updateProgress} onActivity={bumpActivityState} />
             : page === "dashboard" ? <Dashboard progress={progress} activity={activity} settings={settings} onSetDailyGoal={setDailyGoal} onNavigate={navigate} onImport={handleImport} onSelectProblem={p => setSelected(p)} onQuickPractice={startQuickPractice} />
