@@ -2733,9 +2733,10 @@ export default function App() {
   );
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#010409", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif", color: "#E6EDF3" }}>
+    <div style={{ display: "flex", minHeight: "100vh", width: "100%", background: "#010409", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif", color: "#E6EDF3" }}>
       <style>{`
         * { box-sizing:border-box; margin:0; padding:0; }
+        html, body, #root { background:#010409; min-height:100vh; width:100%; }
         ::-webkit-scrollbar{width:5px;height:5px}
         ::-webkit-scrollbar-track{background:#0D1117}
         ::-webkit-scrollbar-thumb{background:#30363D;border-radius:3px}
