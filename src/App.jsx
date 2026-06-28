@@ -743,9 +743,9 @@ const buildHeatmap = (activity) => {
   const today = new Date();
   const dow = today.getDay();
   const start = new Date(today);
-  start.setDate(today.getDate() - dow - 52 * 7);
+  start.setDate(today.getDate() - dow - 25 * 7);
   const weeks = [];
-  for (let w = 0; w < 53; w++) {
+  for (let w = 0; w < 26; w++) {
     const week = [];
     for (let d = 0; d < 7; d++) {
       const dt = new Date(start);
@@ -833,7 +833,8 @@ const generatePracticeSet = (progress, { topic, difficulties, sources, count }) 
     if (topic && topic !== "Any" && p.stepTitle !== topic) return false;
     if (difficulties && difficulties.length && !difficulties.includes("Any") && !difficulties.includes(p.difficulty)) return false;
     const st = progress[p.id]?.status || "Not Started";
-    if (sources && sources.length && !sources.includes(st)) return false;
+    // Strictly match: only include if status is in selected sources
+    if (sources && sources.length > 0 && !sources.includes(st)) return false;
     return true;
   });
   for (let i = pool.length - 1; i > 0; i--) {
@@ -1707,6 +1708,7 @@ function Dashboard({ progress, activity, settings, onSetDailyGoal, onNavigate, o
   const revisedToday = Object.values(progress).filter(v => (v.revisionHistory || []).some(r => r.done && r.doneDate === today)).length;
   const GOAL = settings.dailyGoal;
   const streak = computeStreak(activity);
+  const timerStats = loadTimerStats();
 
   const solvedCount = useCountUp(solved, 1000, true);
   const todayCount = useCountUp(solvedToday, 800, true);
@@ -1773,6 +1775,8 @@ function Dashboard({ progress, activity, settings, onSetDailyGoal, onNavigate, o
           { icon: "🔥", val: streakCount, suffix: streak === 1 ? " Day Streak" : " Day Streak", color: "#F59E0B" },
           { icon: "✓", val: todayCount, suffix: " Solved Today", color: "#3FB950" },
           { icon: "✦", val: revisedCount, suffix: " Revised Today", color: "#A78BFA" },
+          { icon: "⏱", val: timerStats.sessions, suffix: " Study Sessions", color: "#6366f1" },
+          { icon: "⚡", val: timerStats.xp, suffix: " Timer XP", color: "#8b5cf6" },
         ].map(({ icon, val, suffix, color }) => (
           <Card key={suffix} style={{ flex: "1 1 140px", textAlign: "center", padding: "14px 12px" }}>
             <div style={{ fontSize: 24, fontWeight: 700, color, fontFamily: "monospace" }}>{icon} {val}</div>
@@ -2068,8 +2072,28 @@ function PracticeMode({ progress, practice, setPractice, onSelectProblem }) {
 
   const selStyle = { background: "#161B22", border: "1px solid #30363D", color: "#C9D1D9", padding: "6px 10px", borderRadius: 8, fontSize: 12, outline: "none" };
 
+  const [emptyReason, setEmptyReason] = useState(null);
+
   const handleGenerate = () => {
     const questions = generatePracticeSet(progress, { topic, difficulties: diffs, sources, count });
+    if (questions.length === 0) {
+      // Build a helpful message based on what filter caused the empty result
+      const solvedCount = ALL_PROBLEMS.filter(p => ["Solved","Revised"].includes(progress[p.id]?.status)).length;
+      const attemptedCount = ALL_PROBLEMS.filter(p => progress[p.id]?.status === "Attempted").length;
+      let reason = "No problems match your current filters.";
+      if (sources.length === 1 && sources[0] === "Solved" && solvedCount === 0)
+        reason = "You haven't solved any problems yet. Start solving problems on the Roadmap first!";
+      else if (sources.length === 1 && sources[0] === "Revised" && ALL_PROBLEMS.filter(p => progress[p.id]?.status === "Revised").length === 0)
+        reason = "You haven't revised any problems yet. Solve some problems and come back to revise them!";
+      else if (sources.length === 1 && sources[0] === "Attempted" && attemptedCount === 0)
+        reason = "You have no attempted problems. Mark some problems as Attempted first!";
+      else if (sources.length === 0)
+        reason = "Please select at least one status source to generate a set.";
+      setEmptyReason(reason);
+      setPractice(null);
+      return;
+    }
+    setEmptyReason(null);
     setPractice({ questionIds: questions.map(q => q.id), completed: {}, createdAt: todayKey(), filters: { topic, diffs, sources, count } });
   };
 
@@ -2120,7 +2144,16 @@ function PracticeMode({ progress, practice, setPractice, onSelectProblem }) {
               {STATUS_SOURCES.map(s => {
                 const on = sources.includes(s);
                 return (
-                  <button key={s} onClick={() => setSources(arr => arr.includes(s) ? arr.filter(x => x !== s) : [...arr, s])}
+                  <button key={s} onClick={() => setSources(arr => {
+                    if (arr.length === STATUS_SOURCES.length) {
+                      // All selected → clicking one means "only this one"
+                      return [s];
+                    }
+                    // Toggle individual
+                    const next = arr.includes(s) ? arr.filter(x => x !== s) : [...arr, s];
+                    // If nothing left, restore all
+                    return next.length ? next : [...STATUS_SOURCES];
+                  })}
                     style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${on ? SC(s) + "60" : "#21262D"}`, background: on ? SB(s) : "#161B22", color: on ? SC(s) : "#8B949E", display: "flex", alignItems: "center", gap: 6 }}>
                     <span>{on ? "☑" : "☐"}</span>{s}
                   </button>
@@ -2138,6 +2171,12 @@ function PracticeMode({ progress, practice, setPractice, onSelectProblem }) {
           <button onClick={handleGenerate} style={{ padding: "11px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid #A78BFA40", background: "rgba(167,139,250,.12)", color: "#A78BFA" }}>
             {practice ? "🔁 Regenerate" : "Generate Practice Set"}
           </button>
+          {emptyReason && (
+            <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10, color: "#fca5a5", fontSize: 13, padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 10, marginTop: 4 }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>🚫</span>
+              <span>{emptyReason}</span>
+            </div>
+          )}
         </div>
       </Card>
       {practice && (
@@ -2367,19 +2406,80 @@ function fmtTime(secs) {
   return `${m}:${s}`;
 }
 
-function playTimerBeep() {
+// Focus end: deep descending bell toll (three low gongs)
+function playFocusEndSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [523, 659, 784].forEach((f, i) => {
+    [[220, 0], [196, 0.6], [174, 1.2]].forEach(([freq, delay]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      const comp = ctx.createDynamicsCompressor();
+      o.connect(g); g.connect(comp); comp.connect(ctx.destination);
+      o.type = "sine"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, ctx.currentTime + delay);
+      g.gain.linearRampToValueAtTime(0.55, ctx.currentTime + delay + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 1.8);
+      o.start(ctx.currentTime + delay);
+      o.stop(ctx.currentTime + delay + 1.9);
+      // Harmonic overtone
+      const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+      o2.connect(g2); g2.connect(comp);
+      o2.type = "sine"; o2.frequency.value = freq * 2;
+      g2.gain.setValueAtTime(0, ctx.currentTime + delay);
+      g2.gain.linearRampToValueAtTime(0.18, ctx.currentTime + delay + 0.02);
+      g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 1.2);
+      o2.start(ctx.currentTime + delay);
+      o2.stop(ctx.currentTime + delay + 1.3);
+    });
+  } catch (e) {}
+}
+
+// Break end: bright ascending chime (energetic, ready to focus)
+function playBreakEndSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[523, 0], [659, 0.18], [784, 0.36], [1047, 0.54]].forEach(([freq, delay]) => {
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = f; o.type = "sine";
-      g.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
-      g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.15 + 0.05);
-      g.gain.linearRampToValueAtTime(0, ctx.currentTime + i * 0.15 + 0.3);
-      o.start(ctx.currentTime + i * 0.15);
-      o.stop(ctx.currentTime + i * 0.15 + 0.35);
+      o.type = "triangle"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, ctx.currentTime + delay);
+      g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + delay + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.55);
+      o.start(ctx.currentTime + delay);
+      o.stop(ctx.currentTime + delay + 0.6);
     });
+  } catch (e) {}
+}
+
+// Session complete: triumphant fanfare
+function playCompleteSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [[523, 0], [523, 0.12], [523, 0.24], [659, 0.36], [784, 0.52], [1047, 0.72]];
+    notes.forEach(([freq, delay]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "sine"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, ctx.currentTime + delay);
+      g.gain.linearRampToValueAtTime(0.4, ctx.currentTime + delay + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + (freq > 800 ? 1.2 : 0.35));
+      o.start(ctx.currentTime + delay);
+      o.stop(ctx.currentTime + delay + 1.3);
+    });
+  } catch (e) {}
+}
+
+// Last 10 seconds: soft tick-tock warning
+function playTickSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine"; o.frequency.value = 880;
+    g.gain.setValueAtTime(0, ctx.currentTime);
+    g.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    o.start(ctx.currentTime);
+    o.stop(ctx.currentTime + 0.1);
   } catch (e) {}
 }
 
@@ -2397,17 +2497,23 @@ function addTimerSession() {
   return updated;
 }
 
-function TimerRing({ progress, type }) {
-  const R = 90, cx = 100, cy = 100, C = 2 * Math.PI * R;
+function TimerRing({ progress, type, warning, paused }) {
+  const R = 110, cx = 120, cy = 120, C = 2 * Math.PI * R;
   const offset = C - progress * C;
-  const color = type === "break" ? "#34d399" : "#8b5cf6";
+  const color = type === "break" ? "#34d399" : warning ? "#f59e0b" : "#8b5cf6";
+  const glowColor = type === "break" ? "#34d39966" : warning ? "#f59e0b66" : "#8b5cf666";
   return (
-    <svg width="200" height="200" viewBox="0 0 200 200" style={{ filter: `drop-shadow(0 0 14px ${color}55)` }}>
-      <circle cx={cx} cy={cy} r={R} fill="none" strokeWidth="10" stroke="rgba(255,255,255,0.08)" />
-      <circle cx={cx} cy={cy} r={R} fill="none" strokeWidth="10" stroke={color}
+    <svg width="240" height="240" viewBox="0 0 240 240" style={{ filter: `drop-shadow(0 0 20px ${glowColor})` }}>
+      {/* Track */}
+      <circle cx={cx} cy={cy} r={R} fill="none" strokeWidth="12" stroke="rgba(255,255,255,0.06)" />
+      {/* Progress arc */}
+      <circle cx={cx} cy={cy} r={R} fill="none" strokeWidth="12" stroke={color}
         strokeDasharray={C} strokeDashoffset={offset} strokeLinecap="round"
-        transform="rotate(-90 100 100)"
-        style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1), stroke 0.5s" }} />
+        transform="rotate(-90 120 120)"
+        style={{ transition: paused ? "none" : "stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1), stroke 0.4s" }} />
+      {/* Inner glow ring */}
+      <circle cx={cx} cy={cy} r={R - 18} fill="none" strokeWidth="1"
+        stroke={color} strokeOpacity="0.12" />
     </svg>
   );
 }
@@ -2421,8 +2527,10 @@ function StudyTimer({ onBumpActivity }) {
   const [timeLeft, setTimeLeft] = useState(saved?.timeLeft || 0);
   const [running, setRunning] = useState(false);
   const [timerStats, setTimerStats] = useState(loadTimerStats);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const tickRef = useRef(null);
   const prevTimeRef = useRef(null);
+  const prevSecondsRef = useRef(null);
 
   useEffect(() => {
     saveTimerState({ screen, inputMins, phases, phaseIdx, timeLeft });
@@ -2437,14 +2545,18 @@ function StudyTimer({ onBumpActivity }) {
         const updated = addTimerSession();
         setTimerStats(updated);
         if (onBumpActivity) onBumpActivity();
-        playTimerBeep();
+        if (soundEnabled) playCompleteSound();
         return prev;
       }
+      // Play different sound based on what phase we JUST finished
+      if (soundEnabled) {
+        if (phases[prev]?.type === "focus") playFocusEndSound();
+        else playBreakEndSound();
+      }
       setTimeLeft(phases[next].duration);
-      playTimerBeep();
       return next;
     });
-  }, [phases, onBumpActivity]);
+  }, [phases, onBumpActivity, soundEnabled]);
 
   useEffect(() => {
     if (!running) { clearInterval(tickRef.current); return; }
@@ -2456,11 +2568,16 @@ function StudyTimer({ onBumpActivity }) {
       setTimeLeft(t => {
         const next = t - delta;
         if (next <= 0) { clearInterval(tickRef.current); advance(); return 0; }
+        // Tick sound on last 10 seconds
+        if (soundEnabled && next <= 10 && next !== prevSecondsRef.current) {
+          prevSecondsRef.current = next;
+          playTickSound();
+        }
         return next;
       });
     }, 500);
     return () => clearInterval(tickRef.current);
-  }, [running, advance]);
+  }, [running, advance, soundEnabled]);
 
   function startSession() {
     const m = parseInt(inputMins) || 45;
@@ -2480,117 +2597,199 @@ function StudyTimer({ onBumpActivity }) {
   const ringProgress = curPhase ? (totalDur - timeLeft) / totalDur : 0;
   const mins = parseInt(inputMins) || 0;
   const focusMins = mins > 25 ? Math.floor((mins - BREAK_MINS_CONST) / 2) : mins;
-
-  const cardBg = "rgba(255,255,255,0.05)";
-  const border = "1px solid rgba(255,255,255,0.1)";
+  const isWarning = timeLeft <= 10 && timeLeft > 0 && screen === "timer";
+  const accentColor = curPhase?.type === "break" ? "#34d399" : isWarning ? "#f59e0b" : "#8b5cf6";
+  const accentBg = curPhase?.type === "break" ? "rgba(52,211,153,0.1)" : isWarning ? "rgba(245,158,11,0.1)" : "rgba(139,92,246,0.1)";
+  const accentBorder = curPhase?.type === "break" ? "rgba(52,211,153,0.3)" : isWarning ? "rgba(245,158,11,0.3)" : "rgba(139,92,246,0.25)";
 
   return (
     <motion.div variants={fadeSlideUp} initial="hidden" animate="show"
-      style={{ maxWidth: 440, margin: "0 auto", padding: "8px 0" }}>
+      style={{ maxWidth: 520, margin: "0 auto", padding: "8px 0" }}>
 
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#E6EDF3" }}>⏱ Study Timer</div>
-        <div style={{ fontSize: 12, color: "#8B949E", marginTop: 3 }}>Focus sessions synced with your tracker</div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#E6EDF3", letterSpacing: "-0.01em" }}>Study Timer</div>
+          <div style={{ fontSize: 12, color: "#8B949E", marginTop: 2 }}>Smart focus sessions · synced with tracker</div>
+        </div>
+        {screen === "timer" && (
+          <button onClick={() => setSoundEnabled(s => !s)}
+            title={soundEnabled ? "Mute sounds" : "Enable sounds"}
+            style={{ background: soundEnabled ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${soundEnabled ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.1)"}`, borderRadius: 10, color: soundEnabled ? "#c4b5fd" : "#484F58", cursor: "pointer", fontSize: 18, padding: "8px 12px", transition: "all 0.2s" }}>
+            {soundEnabled ? "🔔" : "🔕"}
+          </button>
+        )}
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        {[["Sessions", timerStats.sessions], ["XP Earned", timerStats.xp], ["Streak 🔥", timerStats.streak]].map(([lbl, val]) => (
-          <div key={lbl} style={{ flex: 1, background: cardBg, border, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "#E6EDF3" }}>{val}</div>
-            <div style={{ fontSize: 10, color: "#8B949E", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}>{lbl}</div>
+      {/* Stats row */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
+        {[["🎯", "Sessions", timerStats.sessions], ["⚡", "XP Earned", timerStats.xp], ["🔥", "Streak", timerStats.streak]].map(([icon, lbl, val]) => (
+          <div key={lbl} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px 10px", textAlign: "center" }}>
+            <div style={{ fontSize: 16, marginBottom: 4 }}>{icon}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#E6EDF3", fontFamily: "monospace" }}>{val}</div>
+            <div style={{ fontSize: 10, color: "#8B949E", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{lbl}</div>
           </div>
         ))}
       </div>
 
+      {/* ── SETUP SCREEN ── */}
       {screen === "setup" && (
-        <div style={{ background: cardBg, border, borderRadius: 16, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Session length (minutes)</div>
-            <input type="number" min="5" max="180" value={inputMins}
-              onChange={e => setInputMins(e.target.value)}
-              placeholder="e.g. 45"
-              style={{ width: "100%", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, color: "#E6EDF3", fontSize: 16, padding: "10px 14px", outline: "none" }} />
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Session Duration</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input type="number" min="5" max="180" value={inputMins}
+                onChange={e => setInputMins(e.target.value)}
+                style={{ flex: 1, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, color: "#E6EDF3", fontSize: 28, fontWeight: 700, fontFamily: "monospace", padding: "12px 16px", outline: "none", textAlign: "center" }} />
+              <span style={{ color: "#8B949E", fontSize: 14, fontWeight: 500 }}>min</span>
+            </div>
           </div>
+
+          {/* Quick preset buttons */}
+          <div style={{ display: "flex", gap: 8 }}>
+            {[25, 45, 60, 90].map(m => (
+              <button key={m} onClick={() => setInputMins(String(m))}
+                style={{ flex: 1, background: inputMins === String(m) ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.05)", border: `1px solid ${inputMins === String(m) ? "rgba(139,92,246,0.5)" : "rgba(255,255,255,0.1)"}`, borderRadius: 10, color: inputMins === String(m) ? "#c4b5fd" : "#8B949E", cursor: "pointer", fontSize: 13, fontWeight: 600, padding: "8px 4px", transition: "all 0.2s" }}>
+                {m}m
+              </button>
+            ))}
+          </div>
+
+          {/* Session preview */}
           {mins > 25 && (
-            <div style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)", borderRadius: 10, color: "#c4b5fd", fontSize: 12, padding: "10px 14px", lineHeight: 1.6 }}>
-              ⚡ {focusMins} min focus &nbsp;·&nbsp; ☕ 5 min break &nbsp;·&nbsp; ⚡ {focusMins} min focus
+            <div style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ fontSize: 11, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Session plan</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", borderRadius: 8, color: "#c4b5fd", fontSize: 12, fontWeight: 700, padding: "5px 12px" }}>⚡ {focusMins} min focus</div>
+                <div style={{ color: "#484F58", fontSize: 14 }}>→</div>
+                <div style={{ background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.35)", borderRadius: 8, color: "#6ee7b7", fontSize: 12, fontWeight: 700, padding: "5px 12px" }}>☕ 5 min break</div>
+                <div style={{ color: "#484F58", fontSize: 14 }}>→</div>
+                <div style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", borderRadius: 8, color: "#c4b5fd", fontSize: 12, fontWeight: 700, padding: "5px 12px" }}>⚡ {focusMins} min focus</div>
+              </div>
             </div>
           )}
           {mins > 0 && mins <= 25 && (
-            <div style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 10, color: "#a5b4fc", fontSize: 12, padding: "10px 14px" }}>
-              ⚡ Single focus session · {mins} min
+            <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 12, padding: "12px 16px", color: "#a5b4fc", fontSize: 13 }}>
+              ⚡ Single focus session — {mins} minutes
             </div>
           )}
-          <button onClick={startSession}
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#6366f1)", border: "none", borderRadius: 12, color: "#fff", cursor: "pointer", fontSize: 15, fontWeight: 700, padding: "12px", width: "100%" }}>
-            Start session
+
+          <button onClick={startSession} disabled={mins < 1}
+            style={{ background: "linear-gradient(135deg,#8b5cf6,#6366f1)", border: "none", borderRadius: 14, color: "#fff", cursor: mins < 1 ? "not-allowed" : "pointer", fontSize: 16, fontWeight: 700, padding: "14px", width: "100%", letterSpacing: "0.02em", opacity: mins < 1 ? 0.5 : 1, transition: "opacity 0.2s" }}>
+            Start Session
           </button>
         </div>
       )}
 
+      {/* ── TIMER SCREEN ── */}
       {screen === "timer" && curPhase && (
-        <div style={{ background: cardBg, border, borderRadius: 16, padding: 24 }}>
-          <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#E6EDF3" }}>
-              {curPhase.type === "focus" ? `Focus ${curPhase.index}/${curPhase.of}` : "Break"}
-            </div>
-            <div style={{ fontSize: 11, color: "#8B949E", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              {curPhase.type === "focus" ? "Deep work mode" : "Rest · stretch · breathe"}
+        <div style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${accentBorder}`, borderRadius: 20, padding: "28px 24px", transition: "border-color 0.5s" }}>
+
+          {/* Phase header */}
+          <div style={{ textAlign: "center", marginBottom: 8 }}>
+            <motion.div key={phaseIdx}
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: accentBg, border: `1px solid ${accentBorder}`, borderRadius: 20, padding: "6px 16px", marginBottom: 6 }}>
+                <span style={{ fontSize: 14 }}>{curPhase.type === "break" ? "☕" : "⚡"}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  {curPhase.type === "focus" ? `Focus ${curPhase.index} of ${curPhase.of}` : "Break Time"}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: "#8B949E", letterSpacing: "0.04em" }}>
+                {curPhase.type === "focus" ? "Stay in the zone. No distractions." : "Step away · Breathe · Hydrate"}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Ring + time display */}
+          <div style={{ display: "flex", justifyContent: "center", position: "relative", marginBottom: 8 }}>
+            <TimerRing progress={ringProgress} type={curPhase.type} warning={isWarning} paused={!running} />
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center", width: "100%" }}>
+              <motion.div key={`${phaseIdx}-${running}`}
+                initial={{ scale: 0.95 }} animate={{ scale: 1 }} transition={{ duration: 0.3 }}>
+                <div style={{
+                  color: isWarning ? "#fbbf24" : "#E6EDF3",
+                  fontSize: 52, fontWeight: 700, letterSpacing: "-0.04em",
+                  fontFamily: "monospace", lineHeight: 1,
+                  transition: "color 0.3s",
+                }}>
+                  {fmtTime(timeLeft)}
+                </div>
+              </motion.div>
+              <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: running ? accentColor : "#484F58", boxShadow: running ? `0 0 8px ${accentColor}` : "none", transition: "all 0.3s" }} />
+                <span style={{ color: "#8B949E", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em" }}>{running ? "running" : "paused"}</span>
+              </div>
             </div>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", position: "relative", marginBottom: 20 }}>
-            <TimerRing progress={ringProgress} type={curPhase.type} />
-            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center" }}>
-              <div style={{ color: "#E6EDF3", fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1 }}>{fmtTime(timeLeft)}</div>
-              <div style={{ color: "#8B949E", fontSize: 10, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{running ? "running" : "paused"}</div>
-            </div>
-          </div>
+          {/* Warning banner */}
+          {isWarning && (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 10, color: "#fbbf24", fontSize: 12, fontWeight: 600, padding: "8px 14px", textAlign: "center", marginBottom: 16 }}>
+              ⏰ {timeLeft} second{timeLeft !== 1 ? "s" : ""} remaining
+            </motion.div>
+          )}
 
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 20, flexWrap: "wrap" }}>
+          {/* Phase progress pills */}
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 22, flexWrap: "wrap" }}>
             {phases.map((p, i) => {
-              const status = i < phaseIdx ? "done" : i === phaseIdx ? "active" : "upcoming";
-              const bg = status === "done" ? "rgba(34,197,94,0.15)" : status === "active" ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.05)";
-              const bc = status === "done" ? "rgba(34,197,94,0.4)" : status === "active" ? "rgba(139,92,246,0.5)" : "rgba(255,255,255,0.1)";
-              const tc = status === "done" ? "#86efac" : status === "active" ? "#c4b5fd" : "#484F58";
+              const st = i < phaseIdx ? "done" : i === phaseIdx ? "active" : "upcoming";
+              const bg = st === "done" ? "rgba(52,211,153,0.12)" : st === "active" ? `${accentBg}` : "rgba(255,255,255,0.04)";
+              const bc = st === "done" ? "rgba(52,211,153,0.35)" : st === "active" ? accentBorder : "rgba(255,255,255,0.08)";
+              const tc = st === "done" ? "#6ee7b7" : st === "active" ? accentColor : "#484F58";
               const icon = p.type === "break" ? "☕" : "⚡";
               const lbl = p.type === "break" ? "Break" : `Focus ${p.index}/${p.of}`;
               return (
-                <div key={i} style={{ background: bg, border: `1px solid ${bc}`, borderRadius: 8, color: tc, fontSize: 11, fontWeight: 600, padding: "5px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  <span style={{ fontSize: 14 }}>{icon}</span>
-                  <span>{lbl}</span>
+                <div key={i} style={{ background: bg, border: `1px solid ${bc}`, borderRadius: 10, color: tc, fontSize: 11, fontWeight: 700, padding: "6px 14px", display: "flex", alignItems: "center", gap: 5, textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.3s" }}>
+                  {st === "done" && <span style={{ fontSize: 10 }}>✓</span>}
+                  <span>{icon} {lbl}</span>
                 </div>
               );
             })}
           </div>
 
+          {/* Controls */}
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => setRunning(r => !r)}
-              style={{ flex: 1, background: "linear-gradient(135deg,#8b5cf6,#6366f1)", border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700, padding: "10px" }}>
-              {running ? "⏸ Pause" : "▶ Resume"}
+              style={{ flex: 1, background: running ? "rgba(255,255,255,0.07)" : `linear-gradient(135deg,${accentColor === "#34d399" ? "#34d399,#059669" : accentColor === "#f59e0b" ? "#f59e0b,#d97706" : "#8b5cf6,#6366f1"})`, border: running ? "1px solid rgba(255,255,255,0.15)" : "none", borderRadius: 12, color: "#fff", cursor: "pointer", fontSize: 15, fontWeight: 700, padding: "13px", letterSpacing: "0.02em", transition: "all 0.25s", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>{running ? "⏸" : "▶"}</span>
+              {running ? "Pause" : "Resume"}
             </button>
             <button onClick={resetTimer}
-              style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, color: "#fca5a5", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: "10px 16px" }}>
-              ↺ Reset
+              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 12, color: "#fca5a5", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: "13px 20px", transition: "all 0.2s" }}>
+              ↺
             </button>
           </div>
         </div>
       )}
 
+      {/* ── DONE SCREEN ── */}
       {screen === "done" && (
-        <div style={{ background: cardBg, border, borderRadius: 16, padding: 24, textAlign: "center" }}>
-          <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 12, color: "#86efac", fontSize: 14, fontWeight: 600, padding: "12px", marginBottom: 20 }}>
-            ✓ Session complete! &nbsp;
-            <span style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", borderRadius: 6, color: "#c4b5fd", fontSize: 11, fontWeight: 700, padding: "2px 7px" }}>+50 XP</span>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: 20, padding: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 64, marginBottom: 12 }}>🎉</div>
+          <div style={{ color: "#E6EDF3", fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Session Complete!</div>
+          <div style={{ color: "#8B949E", fontSize: 14, marginBottom: 24 }}>You crushed it. Activity logged to your tracker.</div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 28 }}>
+            <div style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.3)", borderRadius: 12, padding: "10px 20px" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#34d399", fontFamily: "monospace" }}>+50</div>
+              <div style={{ fontSize: 10, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2 }}>XP Earned</div>
+            </div>
+            <div style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 12, padding: "10px 20px" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#a78bfa", fontFamily: "monospace" }}>{timerStats.sessions}</div>
+              <div style={{ fontSize: 10, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2 }}>Total Sessions</div>
+            </div>
+            <div style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: "10px 20px" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#fbbf24", fontFamily: "monospace" }}>{timerStats.streak}🔥</div>
+              <div style={{ fontSize: 10, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2 }}>Day Streak</div>
+            </div>
           </div>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>🎉</div>
-          <div style={{ color: "#E6EDF3", fontSize: 16, fontWeight: 600 }}>Great work today</div>
-          <div style={{ color: "#8B949E", fontSize: 13, marginTop: 4, marginBottom: 20 }}>Activity logged to your DSA tracker</div>
           <button onClick={resetTimer}
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#6366f1)", border: "none", borderRadius: 12, color: "#fff", cursor: "pointer", fontSize: 15, fontWeight: 700, padding: "12px", width: "100%" }}>
-            Start another session
+            style={{ background: "linear-gradient(135deg,#8b5cf6,#6366f1)", border: "none", borderRadius: 14, color: "#fff", cursor: "pointer", fontSize: 15, fontWeight: 700, padding: "14px 32px", width: "100%", letterSpacing: "0.02em" }}>
+            Start Another Session
           </button>
-        </div>
+        </motion.div>
       )}
     </motion.div>
   );
