@@ -35,7 +35,7 @@ const TOPIC_ARRAYS = {
         { id:44, name:"Move Zeros to End",                       difficulty:"Easy",   lc:"https://leetcode.com/problems/move-zeroes/", gfg:"https://bit.ly/3PrGIjT", yt:"https://youtu.be/wvcQg43_V8U?t=1633" },
         { id:45, name:"Linear Search",                           difficulty:"Easy",   lc:null, gfg:"https://bit.ly/3KcpHcB", yt:"https://youtu.be/wvcQg43_V8U?t=2465" },
         { id:46, name:"Union and Intersection of Two Sorted Arrays", difficulty:"Easy", lc:null, gfg:"https://bit.ly/3Ap7Onp", yt:"https://youtu.be/wvcQg43_V8U?t=2584" },
-        { id:47, name:"Find Missing Number in an Array",         difficulty:"Easy",   lc:"https://leetcode.com/problems/missing-number/", gfg:"https://bit.ly/3A2pKTh", yt:"https://youtu.be/bYWLJb3vCWY?t=58" },
+        { id:47, name:"Find Missing Number in an Array",         difficulty:"Easy",   lc:"https://leetcode.com/problems/missing-number/", gfg:"https://www.geeksforgeeks.org/problems/missing-number-in-array1416/1", yt:"https://youtu.be/bYWLJb3vCWY?t=58" },
         { id:48, name:"Maximum Consecutive Ones",                difficulty:"Easy",   lc:"https://leetcode.com/problems/max-consecutive-ones/", gfg:"https://bit.ly/3piuaAN", yt:"https://youtu.be/bYWLJb3vCWY?t=1124" },
         { id:49, name:"Find the Number Appearing Once",          difficulty:"Easy",   lc:"https://leetcode.com/problems/single-number/", gfg:"https://bit.ly/3dudCD8", yt:"https://youtu.be/bYWLJb3vCWY?t=1369" },
         { id:50, name:"Longest Subarray with Given Sum (Positives)", difficulty:"Easy", lc:null, gfg:null, yt:"https://youtu.be/frf7qxiN2qU" },
