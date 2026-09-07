@@ -2225,6 +2225,448 @@ function PracticeMode({ progress, practice, setPractice, onSelectProblem }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// TESTCASE ENGINE
+// ════════════════════════════════════════════════════════════════════════════
+
+const TESTCASES = {
+  // ── Step 3: Arrays ─ Easy ──
+  38: [{input:"arr = [3, 1, 4, 1, 5, 9, 2, 6]", output:"9", explanation:"9 is the largest element"}, {input:"arr = [-5, -2, -8, -1]", output:"-1", explanation:"Handles all negatives"}],
+  39: [{input:"arr = [10, 20, 4, 45, 99]", output:"45", explanation:"99 is largest, 45 is second largest"}, {input:"arr = [5, 5, 5]", output:"-1", explanation:"No distinct second element"}],
+  40: [{input:"arr = [1, 2, 3, 4]", output:"true", explanation:"Array is strictly increasing"}, {input:"arr = [1, 3, 2, 4]", output:"false", explanation:"3 > 2 breaks order"}],
+  41: [{input:"arr = [1, 1, 2, 2, 3]", output:"[1, 2, 3] (length 3)", explanation:"Adjacent duplicates removed"}, {input:"arr = [0, 0, 1, 1, 1, 2]", output:"[0, 1, 2] (length 3)", explanation:"Multiple consecutive duplicates"}],
+  42: [{input:"arr = [1, 2, 3, 4, 5]", output:"[2, 3, 4, 5, 1]", explanation:"Rotated left by one place"}, {input:"arr = [10]", output:"[10]", explanation:"Single element unchanged"}],
+  43: [{input:"arr = [1, 2, 3, 4, 5], d = 2", output:"[3, 4, 5, 1, 2]", explanation:"Rotated left by 2 places"}, {input:"arr = [1, 2], d = 3", output:"[2, 1]", explanation:"d > n, equivalent to d%n = 1"}],
+  44: [{input:"arr = [0, 1, 0, 3, 12]", output:"[1, 3, 12, 0, 0]", explanation:"Non-zeros maintain order, zeros pushed to end"}, {input:"arr = [0, 0, 1]", output:"[1, 0, 0]", explanation:"Multiple leading zeros"}],
+  45: [{input:"arr = [4, 5, 1, 2, 3], target = 1", output:"2", explanation:"1 is found at index 2"}, {input:"arr = [10, 20], target = 5", output:"-1", explanation:"5 is not present"}],
+  46: [{input:"arr1 = [1, 2, 3], arr2 = [2, 3, 4]", output:"Union: [1, 2, 3, 4]", explanation:"Union contains all distinct elements from both"}, {input:"arr1 = [1, 1], arr2 = [1, 1]", output:"Union: [1]", explanation:"Duplicates handled correctly"}],
+  47: [{input:"arr = [1, 2, 4, 5], N = 5", output:"3", explanation:"3 is missing from the sequence 1..5"}, {input:"arr = [1], N = 2", output:"2", explanation:"Only 1 present, 2 is missing"}],
+  48: [{input:"arr = [1, 1, 0, 1, 1, 1]", output:"3", explanation:"Max consecutive 1s is 3"}, {input:"arr = [0, 0, 0]", output:"0", explanation:"No 1s in the array"}],
+  49: [{input:"arr = [4, 1, 2, 1, 2]", output:"4", explanation:"4 appears once, rest appear twice"}, {input:"arr = [2, 2, 1]", output:"1", explanation:"1 is the unique element"}],
+  50: [{input:"arr = [1, 2, 3, 1, 1, 1, 1], k = 3", output:"3", explanation:"Subarray [1,1,1] has sum 3, length 3"}, {input:"arr = [2, 4, 6], k = 3", output:"0", explanation:"No subarray sums to 3"}],
+  51: [{input:"arr = [1, -1, 5, -2, 3], k = 3", output:"4", explanation:"Subarray [1, -1, 5, -2] sums to 3, length 4"}, {input:"arr = [1, 2, 3], k = 3", output:"2", explanation:"Subarrays [1,2] and [3] both sum to 3; longest is [1,2]"}],
+
+  // ── Step 3: Arrays ─ Medium ──
+  52: [{input:"arr = [2, 7, 11, 15], target = 9", output:"[0, 1]", explanation:"2 + 7 = 9"}, {input:"arr = [3, 2, 4], target = 6", output:"[1, 2]", explanation:"2 + 4 = 6"}],
+  53: [{input:"arr = [0, 1, 2, 0, 1, 2]", output:"[0, 0, 1, 1, 2, 2]", explanation:"Dutch National Flag algorithm result"}, {input:"arr = [2, 0, 1]", output:"[0, 1, 2]", explanation:"All three colors present"}],
+  54: [{input:"arr = [3, 2, 3]", output:"3", explanation:"3 appears more than n/2 times"}, {input:"arr = [2, 2, 1, 1, 1, 2, 2]", output:"2", explanation:"2 appears 4 times (> 7/2)"}],
+  55: [{input:"arr = [-2, 1, -3, 4, -1, 2, 1, -5, 4]", output:"6", explanation:"Subarray [4, -1, 2, 1] gives max sum 6"}, {input:"arr = [1]", output:"1", explanation:"Single element array"}],
+  57: [{input:"prices = [7, 1, 5, 3, 6, 4]", output:"5", explanation:"Buy at 1, sell at 6 → profit 5"}, {input:"prices = [7, 6, 4, 3, 1]", output:"0", explanation:"Prices only decrease, no profit possible"}],
+  59: [{input:"arr = [1, 2, 3]", output:"[1, 3, 2]", explanation:"Next lexicographical permutation"}, {input:"arr = [3, 2, 1]", output:"[1, 2, 3]", explanation:"Already highest, wraps to lowest"}],
+  60: [{input:"arr = [16, 17, 4, 3, 5, 2]", output:"[17, 5, 2]", explanation:"Elements greater than all elements to their right"}, {input:"arr = [1]", output:"[1]", explanation:"Single element is a leader"}],
+  61: [{input:"arr = [100, 4, 200, 1, 3, 2]", output:"4", explanation:"Sequence [1, 2, 3, 4] has length 4"}, {input:"arr = [0, 3, 7, 2, 5, 8, 4, 6, 0, 1]", output:"9", explanation:"Sequence 0-8 has length 9"}],
+  62: [{input:"matrix = [[1,1,1],[1,0,1],[1,1,1]]", output:"[[1,0,1],[0,0,0],[1,0,1]]", explanation:"Middle cell is 0, so its entire row and column become 0"}],
+  63: [{input:"matrix = [[1,2,3],[4,5,6],[7,8,9]]", output:"[[7,4,1],[8,5,2],[9,6,3]]", explanation:"Rotated 90 degrees clockwise"}],
+  64: [{input:"matrix = [[1,2,3],[4,5,6],[7,8,9]]", output:"[1,2,3,6,9,8,7,4,5]", explanation:"Spiral order traversal"}],
+  65: [{input:"arr = [1, 1, 1], k = 2", output:"2", explanation:"Subarrays [0,1] and [1,2] sum to 2"}, {input:"arr = [1, 2, 3], k = 3", output:"2", explanation:"Subarrays [0,1] and [2,2] sum to 3"}],
+
+  // ── Step 3: Arrays ─ Hard ──
+  66: [{input:"numRows = 5", output:"[[1],[1,1],[1,2,1],[1,3,3,1],[1,4,6,4,1]]", explanation:"First 5 rows of Pascal's Triangle"}],
+  67: [{input:"arr = [3, 2, 3]", output:"[3]", explanation:"3 appears > n/3 times"}, {input:"arr = [1, 2]", output:"[1, 2]", explanation:"Both appear > n/3 times"}],
+  68: [{input:"arr = [-1, 0, 1, 2, -1, -4]", output:"[[-1,-1,2],[-1,0,1]]", explanation:"Two unique triplets sum to 0"}],
+  69: [{input:"arr = [1, 0, -1, 0, -2, 2], target = 0", output:"[[-2,-1,1,2],[-2,0,0,2],[-1,0,0,1]]", explanation:"Three unique quadruplets sum to 0"}],
+  72: [{input:"intervals = [[1,3],[2,6],[8,10],[15,18]]", output:"[[1,6],[8,10],[15,18]]", explanation:"[1,3] and [2,6] overlap and merge to [1,6]"}],
+  73: [{input:"nums1 = [1,2,3,0,0,0], m=3, nums2 = [2,5,6], n=3", output:"[1,2,2,3,5,6]", explanation:"Merge nums2 into nums1 in-place"}],
+  75: [{input:"arr = [2, 4, 1, 3, 5]", output:"3", explanation:"Inversions: (2,1), (4,1), (4,3)"}, {input:"arr = [5, 4, 3, 2, 1]", output:"10", explanation:"Reverse sorted array has n*(n-1)/2 inversions"}],
+  76: [{input:"arr = [1, 3, 2, 3, 1]", output:"2", explanation:"Pairs (3,1) at (1,4) and (3,1) at (2,4) — actually valid reverse pairs are (3,1) and (3,1) and (2,1) — output 2 for this specific definition"}, {input:"arr = [2, 4, 3, 5, 1]", output:"3", explanation:"Three valid reverse pairs exist"}],
+  77: [{input:"arr = [2, 3, -2, 4]", output:"6", explanation:"Subarray [2, 3] gives product 6"}, {input:"arr = [-2, 0, -1]", output:"0", explanation:"0 gives max product (better than 2)"}],
+
+  // ── Step 4: Binary Search ──
+  200: [{input:"arr = [-1, 0, 3, 5, 9, 12], target = 9", output:"4", explanation:"9 is at index 4"}, {input:"arr = [-1, 0, 3, 5, 9, 12], target = 2", output:"-1", explanation:"2 is not present"}],
+  203: [{input:"arr = [1, 3, 5, 6], target = 5", output:"2", explanation:"5 is at index 2"}, {input:"arr = [1, 3, 5, 6], target = 2", output:"1", explanation:"2 would be inserted at index 1"}],
+  205: [{input:"arr = [5, 7, 7, 8, 8, 10], target = 8", output:"[3, 4]", explanation:"8 first appears at 3, last at 4"}, {input:"arr = [5, 7, 7, 8, 8, 10], target = 6", output:"[-1, -1]", explanation:"6 is not present"}],
+  207: [{input:"arr = [4, 5, 6, 7, 0, 1, 2], target = 0", output:"4", explanation:"0 is at index 4 in rotated array"}, {input:"arr = [4, 5, 6, 7, 0, 1, 2], target = 3", output:"-1", explanation:"3 is not present"}],
+  209: [{input:"arr = [3, 4, 5, 1, 2]", output:"1", explanation:"Original sorted array was [1,2,3,4,5], min is 1"}, {input:"arr = [4, 5, 6, 7, 0, 1, 2]", output:"0", explanation:"Minimum element is 0"}],
+  212: [{input:"arr = [1, 2, 3, 1]", output:"2", explanation:"Peak element at index 2 (value 3)"}, {input:"arr = [1, 2, 1, 3, 5, 6, 4]", output:"5", explanation:"Peak element at index 5 (value 6)"}],
+
+  // ── Step 5: Strings ──
+  250: [{input:'s = "(()())(())"', output:'"()()()"', explanation:"Remove outermost parentheses of each primitive decomposition"}],
+  251: [{input:'s = "the sky is blue"', output:'"blue is sky the"', explanation:"Words reversed, leading/trailing spaces removed"}],
+  253: [{input:'strs = ["flower","flow","flight"]', output:'"fl"', explanation:"Common prefix of all strings"}, {input:'strs = ["dog","racecar","car"]', output:'""', explanation:"No common prefix exists"}],
+  254: [{input:'s = "egg", t = "add"', output:"true", explanation:"e→a, g→d mapping is consistent"}, {input:'s = "foo", t = "bar"', output:"false", explanation:"o cannot map to both a and r"}],
+  255: [{input:'s = "abcde", goal = "cdeab"', output:"true", explanation:"cdeab is a rotation of abcde"}, {input:'s = "abcde", goal = "abced"', output:"false", explanation:"abced is not a valid rotation"}],
+  256: [{input:'s = "anagram", t = "nagaram"', output:"true", explanation:"Both have same character counts"}, {input:'s = "rat", t = "car"', output:"false", explanation:"Different character frequencies"}],
+
+  // ── Step 6: Linked List ──
+  289: [{input:"list = [1, 2, 3, 4, 5]", output:"3", explanation:"Middle node has value 3"}, {input:"list = [1, 2, 3, 4, 5, 6]", output:"4", explanation:"For even length, second middle is returned"}],
+  290: [{input:"list = [1, 2, 3, 4, 5]", output:"[5, 4, 3, 2, 1]", explanation:"List reversed completely"}],
+  291: [{input:"list = [3, 2, 0, -4], pos = 1", output:"true", explanation:"Tail connects to node at index 1"}, {input:"list = [1], pos = -1", output:"false", explanation:"No cycle in single-node list"}],
+  294: [{input:"list = [1, 2, 2, 1]", output:"true", explanation:"List reads same forwards and backwards"}, {input:"list = [1, 2]", output:"false", explanation:"1 != 2"}],
+  296: [{input:"list = [1, 2, 3, 4, 5], n = 2", output:"[1, 2, 3, 5]", explanation:"4th node from end (value 4) is removed"}],
+  298: [{input:"list = [4, 2, 1, 3]", output:"[1, 2, 3, 4]", explanation:"List sorted in ascending order"}],
+  302: [{input:"l1 = [2, 4, 3], l2 = [5, 6, 4]", output:"[7, 0, 8]", explanation:"342 + 465 = 807"}],
+
+  // ── Step 7: Recursion ──
+  326: [{input:"n = 3", output:'["((()))","(()())","(())()","()(())","()()()"]', explanation:"All valid combinations of 3 pairs of parentheses"}],
+  327: [{input:"arr = [1, 2, 3]", output:"[[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]]", explanation:"Power set of 3 elements has 8 subsets"}],
+  330: [{input:"candidates = [2, 3, 6, 7], target = 7", output:"[[2, 2, 3], [7]]", explanation:"2+2+3=7 and 7=7"}],
+  337: [{input:'board = [["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]], word = "ABCCED"', output:"true", explanation:"Word exists in the grid"}],
+  344: [{input:"arr = [1, 2, 3]", output:"[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]", explanation:"All 6 permutations of 3 elements"}],
+
+  // ── Step 8: Bit Manipulation ──
+  353: [{input:"n = 16", output:"true", explanation:"16 is 2^4"}, {input:"n = 18", output:"false", explanation:"18 is not a power of 2"}],
+  354: [{input:"n = 11", output:"3", explanation:"11 in binary is 1011, three 1-bits"}, {input:"n = 128", output:"1", explanation:"128 is 10000000, one 1-bit"}],
+
+  // ── Step 9: Stack / Queue ──
+  394: [{input:"nums1 = [4, 1, 2], nums2 = [1, 3, 4, 2]", output:"[-1, 3, -1]", explanation:"Next greater for 4 is -1, for 1 is 3, for 2 is -1"}],
+  398: [{input:"height = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]", output:"6", explanation:"Total 6 units of water trapped"}],
+  403: [{input:"heights = [2, 1, 5, 6, 2, 3]", output:"10", explanation:"Largest rectangle has area 10 (from heights 5,6 spanning width 2)"}],
+
+  // ── Step 10: Sliding Window ──
+  410: [{input:'s = "abcabcbb"', output:"3", explanation:"Longest substring without repeats is \"abc\""}, {input:'s = "bbbbb"', output:"1", explanation:"All characters are same"}],
+  411: [{input:"arr = [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], k = 2", output:"6", explanation:"Flip 2 zeros to get 6 consecutive 1s"}],
+  420: [{input:'s = "ADOBECODEBANC", t = "ABC"', output:'"BANC"', explanation:"Smallest window containing A, B, and C"}],
+
+  // ── Step 11: Heaps ──
+  434: [{input:"arr = [3, 2, 1, 5, 6, 4], k = 2", output:"5", explanation:"2nd largest element is 5"}],
+  438: [{input:"arr = [1, 1, 1, 2, 2, 3], k = 2", output:"[1, 2]", explanation:"1 appears 3 times, 2 appears 2 times"}],
+
+  // ── Step 12: Greedy ──
+  452: [{input:"start = [1, 3, 0, 5, 8, 5], end = [2, 4, 6, 7, 9, 9]", output:"4", explanation:"Maximum 4 meetings can be held"}],
+  453: [{input:"arr = [2, 3, 1, 1, 4]", output:"true", explanation:"Can reach last index from start"}, {input:"arr = [3, 2, 1, 0, 4]", output:"false", explanation:"Stuck at index 3"}],
+
+  // ── Step 13: Binary Trees ──
+  481: [{input:"root = [3, 9, 20, null, null, 15, 7]", output:"3", explanation:"Maximum depth is 3"}],
+  483: [{input:"root = [1, 2, 3, 4, 5]", output:"3", explanation:"Diameter path is 4→2→1→3 or 5→2→1→3, length 3 edges"}],
+  484: [{input:"root = [-10, 9, 20, null, null, 15, 7]", output:"42", explanation:"Max path sum is 15+20+7=42"}],
+  494: [{input:"root = [3, 5, 1, 6, 2, 0, 8, null, null, 7, 4], p = 5, q = 1", output:"3", explanation:"LCA of 5 and 1 is 3"}],
+
+  // ── Step 14: BST ──
+  601: [{input:"root = [4, 2, 7, 1, 3], val = 2", output:"Node 2", explanation:"2 exists in the BST"}, {input:"root = [4, 2, 7, 1, 3], val = 5", output:"null", explanation:"5 does not exist"}],
+  607: [{input:"root = [3, 1, 4, null, 2], k = 1", output:"1", explanation:"1st smallest element is 1"}],
+
+  // ── Step 15: Graphs ──
+  625: [{input:"isConnected = [[1,1,0],[1,1,0],[0,0,1]]", output:"2", explanation:"Two provinces: {0,1} and {2}"}],
+  626: [{input:'grid = [["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]', output:"3", explanation:"Three separate islands"}],
+  627: [{input:"grid = [[2,1,1],[1,1,0],[0,1,1]]", output:"4", explanation:"All fresh oranges rot in 4 minutes"}],
+  643: [{input:"numCourses = 2, prerequisites = [[1,0]]", output:"true", explanation:"Can finish by taking course 0 then 1"}, {input:"numCourses = 2, prerequisites = [[1,0],[0,1]]", output:"false", explanation:"Cyclic dependency"}],
+
+  // ── Step 16: DP ──
+  680: [{input:"n = 2", output:"2", explanation:"1+1 or 2"}, {input:"n = 3", output:"3", explanation:"1+1+1, 1+2, 2+1"}],
+  696: [{input:"W = 50, wt = [10, 20, 30], val = [60, 100, 120]", output:"220", explanation:"Take items with weight 20 and 30, value 100+120=220"}],
+  701: [{input:'text1 = "abcde", text2 = "ace"', output:"3", explanation:"LCS is \"ace\" with length 3"}],
+  708: [{input:'word1 = "horse", word2 = "ros"', output:"3", explanation:"horse→rorse→rose→ros (3 operations)"}],
+  710: [{input:"prices = [7, 1, 5, 3, 6, 4]", output:"5", explanation:"Buy at 1, sell at 6"}],
+  716: [{input:"arr = [10, 9, 2, 5, 3, 7, 101, 18]", output:"4", explanation:"LIS is [2, 3, 7, 101] with length 4"}],
+
+  // ── Step 17: Tries ──
+  740: [{input:'insert("apple"), search("apple")', output:"true", explanation:"\"apple\" was inserted and found"}, {input:'search("app"), startsWith("app")', output:"false, true", explanation:"\"app\" is not a complete word, but is a prefix"}],
+  744: [{input:"nums = [3, 10, 5, 25, 2, 8]", output:"28", explanation:"5 XOR 25 = 28 is maximum"}],
+
+  // ── Step 18: Strings Advanced ──
+  751: [{input:'haystack = "sadbutsad", needle = "sad"', output:"0", explanation:"\"sad\" occurs at index 0"}, {input:'haystack = "leetcode", needle = "leeto"', output:"-1", explanation:"\"leeto\" not found"}],
+};
+
+function generateFallbackTestcases(p) {
+  const n = p.name;
+  const step = p.stepId;
+
+  if (step === "step2") {
+    return [
+      { input: "arr = [64, 25, 12, 22, 11]", output: "[11, 12, 22, 25, 64]", explanation: "Basic unsorted array" },
+      { input: "arr = [5, 1, 4, 2, 8]", output: "[1, 2, 4, 5, 8]", explanation: "Another unsorted array" },
+    ];
+  }
+
+  if (step === "step3") {
+    if (n.includes("Largest") || n.includes("Maximum") || n.includes("Max")) {
+      return [{input:"arr = [3, 1, 4, 1, 5, 9, 2, 6]", output:"9", explanation:"Max element is 9"}, {input:"arr = [-5, -2, -8, -1]", output:"-1", explanation:"Handles negatives"}];
+    }
+    if (n.includes("Second")) {
+      return [{input:"arr = [10, 20, 4, 45, 99]", output:"45", explanation:"Second largest is 45"}, {input:"arr = [3, 3, 3]", output:"-1", explanation:"No distinct second element"}];
+    }
+    if (n.includes("Rotate")) {
+      return [{input:"arr = [1, 2, 3, 4, 5], d = 2", output:"[4, 5, 1, 2, 3]", explanation:"Rotated left by 2"}, {input:"arr = [1, 2, 3], d = 1", output:"[2, 3, 1]", explanation:"Single rotation"}];
+    }
+    if (n.includes("Zero") || n.includes("0")) {
+      return [{input:"arr = [0, 1, 0, 3, 12]", output:"[1, 3, 12, 0, 0]", explanation:"Zeros moved to end"}, {input:"arr = [0, 0, 1]", output:"[1, 0, 0]", explanation:"Multiple leading zeros"}];
+    }
+    if (n.includes("Duplicate")) {
+      return [{input:"arr = [1, 1, 2, 2, 3, 4, 4]", output:"[1, 2, 3, 4] (length 4)", explanation:"Removes adjacent duplicates"}, {input:"arr = [0, 0, 1, 1, 1, 2, 2]", output:"[0, 1, 2] (length 3)", explanation:"Multiple duplicates"}];
+    }
+    if (n.includes("Missing")) {
+      return [{input:"arr = [1, 2, 4, 5], N = 5", output:"3", explanation:"3 is missing from 1..5"}, {input:"arr = [1], N = 2", output:"2", explanation:"Only 1 present, missing 2"}];
+    }
+    if (n.includes("Kadane")) {
+      return [{input:"arr = [-2, 1, -3, 4, -1, 2, 1, -5, 4]", output:"6", explanation:"Subarray [4,-1,2,1] sums to 6"}, {input:"arr = [1]", output:"1", explanation:"Single element"}];
+    }
+    if (n.includes("Stock") || n.includes("Buy")) {
+      return [{input:"prices = [7, 1, 5, 3, 6, 4]", output:"5", explanation:"Buy at 1, sell at 6"}, {input:"prices = [7, 6, 4, 3, 1]", output:"0", explanation:"No profitable transaction"}];
+    }
+    if (n.includes("2Sum") || n.includes("Two Sum")) {
+      return [{input:"arr = [2, 7, 11, 15], target = 9", output:"[0, 1]", explanation:"2+7=9"}, {input:"arr = [3, 2, 4], target = 6", output:"[1, 2]", explanation:"2+4=6"}];
+    }
+    if (n.includes("3Sum")) {
+      return [{input:"arr = [-1, 0, 1, 2, -1, -4]", output:"[[-1,-1,2], [-1,0,1]]", explanation:"Two unique triplets sum to 0"}];
+    }
+    if (n.includes("4Sum")) {
+      return [{input:"arr = [1, 0, -1, 0, -2, 2], target = 0", output:"[[-2,-1,1,2],[-2,0,0,2],[-1,0,0,1]]", explanation:"Three unique quadruplets"}];
+    }
+    if (n.includes("Merge")) {
+      return [{input:"arr1 = [1, 3, 5], arr2 = [2, 4, 6]", output:"[1, 2, 3, 4, 5, 6]", explanation:"Merged sorted arrays"}];
+    }
+    if (n.includes("Matrix") || n.includes("matrix")) {
+      return [{input:"matrix = [[1,2,3],[4,5,6],[7,8,9]]", output:"See problem statement", explanation:"Standard 3x3 matrix"}];
+    }
+    if (n.includes("Union") || n.includes("Intersection")) {
+      return [{input:"arr1 = [1, 2, 3], arr2 = [2, 3, 4]", output:"Union: [1,2,3,4]", explanation:"All distinct elements from both"}];
+    }
+    if (n.includes("Search")) {
+      return [{input:"arr = [4, 5, 1, 2, 3], target = 1", output:"2", explanation:"1 found at index 2"}];
+    }
+    return [
+      { input: "arr = [1, 2, 3, 4, 5]", output: "See problem statement", explanation: "Standard array input" },
+      { input: "arr = [5, 4, 3, 2, 1]", output: "See problem statement", explanation: "Reverse sorted array" },
+    ];
+  }
+
+  if (step === "step4") {
+    return [
+      { input: "arr = [1, 3, 5, 7, 9], target = 5", output: "2", explanation: "5 is at index 2" },
+      { input: "arr = [1, 3, 5, 7, 9], target = 10", output: "-1", explanation: "Not found in array" },
+    ];
+  }
+
+  if (step === "step5" || step === "step18") {
+    return [
+      { input: 's = "hello"', output: "See problem statement", explanation: "Basic string input" },
+      { input: 's = "abc123!@#"', output: "See problem statement", explanation: "Alphanumeric with special chars" },
+    ];
+  }
+
+  if (step === "step6") {
+    return [
+      { input: "list = [1, 2, 3, 4, 5]", output: "See problem statement", explanation: "Standard linked list" },
+      { input: "list = [10, 20, 30]", output: "See problem statement", explanation: "Short linked list" },
+    ];
+  }
+
+  if (step === "step7") {
+    return [
+      { input: "n = 3, arr = [1, 2, 3]", output: "See problem statement", explanation: "Small input set" },
+      { input: "n = 5, arr = [3, 1, 4, 1, 5]", output: "See problem statement", explanation: "Mixed values" },
+    ];
+  }
+
+  if (step === "step8") {
+    return [
+      { input: "n = 5", output: "See problem statement", explanation: "Basic integer input" },
+      { input: "n = 8", output: "See problem statement", explanation: "Power of 2" },
+    ];
+  }
+
+  if (step === "step9") {
+    return [
+      { input: "arr = [4, 5, 2, 25, 7, 8]", output: "See problem statement", explanation: "Standard array for stack problems" },
+      { input: 's = "(a+b)*(c-d)"', output: "See problem statement", explanation: "Expression string" },
+    ];
+  }
+
+  if (step === "step10") {
+    return [
+      { input: "arr = [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], k = 2", output: "6", explanation: "Max consecutive 1s with 2 flips" },
+      { input: 's = "abcabcbb"', output: "3", explanation: "Longest substring without repeats" },
+    ];
+  }
+
+  if (step === "step11") {
+    return [
+      { input: "arr = [3, 2, 1, 5, 6, 4], k = 2", output: "5", explanation: "2nd largest element" },
+      { input: "arr = [1, 1, 1, 2, 2, 3], k = 2", output: "[1, 2]", explanation: "Top 2 frequent elements" },
+    ];
+  }
+
+  if (step === "step12") {
+    return [
+      { input: "intervals = [[1,3],[2,6],[8,10],[15,18]]", output: "[[1,6],[8,10],[15,18]]", explanation: "Overlapping intervals merged" },
+      { input: "coins = [1, 2, 5], amount = 11", output: "3", explanation: "5+5+1=11" },
+    ];
+  }
+
+  if (step === "step13") {
+    return [
+      { input: "root = [1,2,3,4,5,null,6]", output: "See problem statement", explanation: "Standard binary tree" },
+      { input: "root = [1,null,2,3]", output: "See problem statement", explanation: "Right-skewed tree" },
+    ];
+  }
+
+  if (step === "step14") {
+    return [
+      { input: "root = [4,2,7,1,3], val = 5", output: "See problem statement", explanation: "Standard BST" },
+      { input: "root = [40,20,60,10,30,50,70]", output: "See problem statement", explanation: "Balanced BST" },
+    ];
+  }
+
+  if (step === "step15") {
+    return [
+      { input: "grid = [[1,1,0,0,0],[1,1,0,0,0],[0,0,1,0,0],[0,0,0,1,1]]", output: "3", explanation: "3 islands in grid" },
+      { input: "n = 4, edges = [[0,1],[1,2],[2,3]]", output: "See problem statement", explanation: "Linear graph" },
+    ];
+  }
+
+  if (step === "step16") {
+    return [
+      { input: "n = 5, arr = [1, 2, 3, 4, 5]", output: "See problem statement", explanation: "Standard DP input" },
+      { input: 'text1 = "abcde", text2 = "ace"', output: "3", explanation: "LCS is 'ace'" },
+    ];
+  }
+
+  if (step === "step17") {
+    return [
+      { input: 'words = ["apple", "app", "apricot"]', output: "See problem statement", explanation: "String array for Trie" },
+      { input: "nums = [3, 10, 5, 25, 2, 8]", output: "28", explanation: "Max XOR pair" },
+    ];
+  }
+
+  return [
+    { input: "See problem constraints", output: "See problem statement", explanation: "Refer to the problem for specific input format" },
+    { input: "Example 2", output: "See problem statement", explanation: "Try with edge cases: empty input, single element, max constraints" },
+  ];
+}
+
+function getTestcases(problem) {
+  if (TESTCASES[problem.id]) return TESTCASES[problem.id];
+  return generateFallbackTestcases(problem);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// NOTES MODAL
+// ════════════════════════════════════════════════════════════════════════════
+function NotesModal({ isOpen, onClose, problemName, notes, onSave }) {
+  const [text, setText] = useState(notes);
+  useEffect(() => { setText(notes); }, [notes]);
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          variants={modalBackdropVariants}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.7)", padding: 16,
+          }}
+          onClick={onClose}>
+          <motion.div
+            variants={modalPanelVariants}
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: "100%", maxWidth: 680, maxHeight: "88vh",
+              background: "#0D1117", border: "1px solid #30363D", borderRadius: 16,
+              boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
+              display: "flex", flexDirection: "column",
+            }}>
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid #21262D", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#E6EDF3" }}>📝 Notes: {problemName}</div>
+              <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid #30363D", borderRadius: 8, color: "#8B949E", cursor: "pointer", padding: "4px 10px", fontSize: 13, lineHeight: 1.5 }}>✕</button>
+            </div>
+            <div style={{ padding: 20, flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
+              <textarea
+                value={text}
+                onChange={e => setText(e.target.value)}
+                placeholder="Write your approach, key insights, edge cases, pseudocode, or anything you want to remember..."
+                rows={18}
+                style={{
+                  width: "100%", background: "#161B22", border: "1px solid #30363D", borderRadius: 12,
+                  color: "#C9D1D9", fontSize: 14, padding: 16, outline: "none", resize: "vertical",
+                  fontFamily: "inherit", lineHeight: 1.6, minHeight: 320,
+                }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <span style={{ fontSize: 12, color: "#484F58", fontFamily: "monospace" }}>{text.length} chars</span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={onClose} style={{ padding: "10px 20px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid #21262D", background: "#161B22", color: "#8B949E" }}>Cancel</button>
+                  <button onClick={() => { onSave(text); onClose(); }}
+                    style={{ padding: "10px 24px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid #A78BFA40", background: "rgba(167,139,250,.12)", color: "#A78BFA" }}>
+                    Save Notes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TESTCASE MODAL
+// ════════════════════════════════════════════════════════════════════════════
+function TestcaseModal({ isOpen, onClose, problem }) {
+  const testcases = useMemo(() => getTestcases(problem), [problem]);
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+  };
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          variants={modalBackdropVariants}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.7)", padding: 16,
+          }}
+          onClick={onClose}>
+          <motion.div
+            variants={modalPanelVariants}
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: "100%", maxWidth: 640, maxHeight: "88vh",
+              background: "#0D1117", border: "1px solid #30363D", borderRadius: 16,
+              boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
+              display: "flex", flexDirection: "column",
+            }}>
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid #21262D", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#E6EDF3" }}>🧪 Testcases: {problem.name}</div>
+              <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid #30363D", borderRadius: 8, color: "#8B949E", cursor: "pointer", padding: "4px 10px", fontSize: 13, lineHeight: 1.5 }}>✕</button>
+            </div>
+            <div style={{ padding: 20, flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
+              {testcases.map((tc, i) => (
+                <div key={i} style={{ background: "#161B22", border: "1px solid #21262D", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#A78BFA", textTransform: "uppercase", letterSpacing: "0.06em" }}>Testcase {i + 1}</span>
+                    <button onClick={() => copyToClipboard(`Input:
+${tc.input}\n\nOutput:
+${tc.output}\n\nExplanation:
+${tc.explanation}`)}
+                      style={{ fontSize: 11, color: "#8B949E", background: "rgba(255,255,255,0.05)", border: "1px solid #21262D", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 600 }}>
+                      📋 Copy
+                    </button>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5, fontWeight: 600 }}>Input</div>
+                    <pre style={{ margin: 0, background: "#0D1117", border: "1px solid #21262D", borderRadius: 8, padding: 12, color: "#E6EDF3", fontSize: 12, fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace", overflowX: "auto", lineHeight: 1.5 }}>{tc.input}</pre>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5, fontWeight: 600 }}>Output</div>
+                    <pre style={{ margin: 0, background: "#0D1117", border: "1px solid #21262D", borderRadius: 8, padding: 12, color: "#3FB950", fontSize: 12, fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace", overflowX: "auto", lineHeight: 1.5 }}>{tc.output}</pre>
+                  </div>
+                  {tc.explanation && (
+                    <div>
+                      <div style={{ fontSize: 10, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5, fontWeight: 600 }}>Explanation</div>
+                      <div style={{ fontSize: 12, color: "#C9D1D9", lineHeight: 1.5 }}>{tc.explanation}</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PROBLEM DETAIL
+// ════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 // PROBLEM DETAIL
 // ════════════════════════════════════════════════════════════════════════════
 function ProblemDetail({ problem, progress, onBack, onUpdate, onActivity }) {
@@ -2235,6 +2677,8 @@ function ProblemDetail({ problem, progress, onBack, onUpdate, onActivity }) {
   const [notes, setNotes] = useState(pr.notes || "");
   const [saved, setSaved] = useState(false);
   const [revCompleted, setRevCompleted] = useState(null);
+  const [showNotes, setShowNotes] = useState(false);
+  const [showTestcases, setShowTestcases] = useState(false);
 
   const STATUSES = ["Not Started", "Attempted", "Solved", "Revised"];
   const MTAGS = ["Logic Error", "Edge Case", "Time Complexity", "Space Complexity", "Syntax Error"];
@@ -2266,48 +2710,86 @@ function ProblemDetail({ problem, progress, onBack, onUpdate, onActivity }) {
     setTimeout(() => setRevCompleted(null), 2000);
   };
 
-  const inputStyle = { background: "#161B22", border: "1px solid #21262D", borderRadius: 8, color: "#C9D1D9", fontSize: 13, padding: "10px 12px", outline: "none", width: "100%", boxSizing: "border-box" };
+  const diffColor = DC(problem.difficulty);
 
   return (
-    <motion.div variants={staggerContainer} initial="hidden" animate="show" style={{ maxWidth: 520, margin: "0 auto", display: "flex", flexDirection: "column", gap: 14 }}>
+    <motion.div variants={staggerContainer} initial="hidden" animate="show" style={{ maxWidth: 560, margin: "0 auto", display: "flex", flexDirection: "column", gap: 14 }}>
       <button onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#8B949E", background: "none", border: "none", cursor: "pointer", padding: 0 }}>← Back</button>
-      <Card>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+
+      {/* ── Problem Header Card ── */}
+      <Card style={{ borderLeft: `3px solid ${diffColor}`, position: "relative", overflow: "hidden" }}>
+        {/* Subtle difficulty glow */}
+        <div style={{ position: "absolute", top: 0, right: 0, width: "40%", height: "100%", background: `radial-gradient(circle at top right, ${diffColor}08, transparent 70%)`, pointerEvents: "none" }} />
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "flex-start", marginBottom: 8, position: "relative", zIndex: 1 }}>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "#E6EDF3", flex: 1, margin: 0, lineHeight: 1.3 }}>{problem.name}</h1>
           <DiffBadge d={problem.difficulty} />
         </div>
-        <div style={{ fontSize: 12, color: "#8B949E", marginBottom: 12 }}>{problem.subtopicTitle} · {problem.stepTitle}</div>
-        <LinkPills p={problem} />
-        {problem.patternTags && problem.patternTags.length > 0 && <div style={{ marginTop: 12 }}><PatternTags tags={problem.patternTags} /></div>}
+        <div style={{ fontSize: 12, color: "#8B949E", marginBottom: 12, position: "relative", zIndex: 1 }}>{problem.subtopicTitle} · {problem.stepTitle}</div>
+
+        {/* Action Row: Links + Compiler + Testcases + Notes */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginBottom: 10, position: "relative", zIndex: 1 }}>
+          <LinkPills p={problem} />
+          <a href="https://www.underratedcoder.com/compiler" target="_blank" rel="noopener noreferrer"
+            style={{ color: "#58A6FF", border: "1px solid #58A6FF33", background: "#58A6FF12", padding: "3px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, textDecoration: "none", lineHeight: 1.6, display: "inline-flex", alignItems: "center", gap: 4, transition: "all .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#58A6FF22"; e.currentTarget.style.borderColor = "#58A6FF55"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#58A6FF12"; e.currentTarget.style.borderColor = "#58A6FF33"; }}>
+            💻 Compiler
+          </a>
+          <button onClick={() => setShowTestcases(true)}
+            style={{ color: "#F59E0B", border: "1px solid #F59E0B33", background: "#F59E0B12", padding: "3px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer", lineHeight: 1.6, display: "inline-flex", alignItems: "center", gap: 4, transition: "all .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#F59E0B22"; e.currentTarget.style.borderColor = "#F59E0B55"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#F59E0B12"; e.currentTarget.style.borderColor = "#F59E0B33"; }}>
+            🧪 Testcases
+          </button>
+          <button onClick={() => setShowNotes(true)}
+            style={{ color: "#EC4899", border: "1px solid #EC489933", background: "#EC489912", padding: "3px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer", lineHeight: 1.6, display: "inline-flex", alignItems: "center", gap: 4, transition: "all .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#EC489922"; e.currentTarget.style.borderColor = "#EC489955"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#EC489912"; e.currentTarget.style.borderColor = "#EC489933"; }}>
+            📝 Notes {notes?.trim() ? "· " + notes.trim().length + " chars" : ""}
+          </button>
+        </div>
+
+        {problem.patternTags && problem.patternTags.length > 0 && <div style={{ position: "relative", zIndex: 1 }}><PatternTags tags={problem.patternTags} /></div>}
       </Card>
+
+      {/* ── Status Card ── */}
       <Card>
         <SectionTitle>Status</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8 }}>
           {STATUSES.map(s => (
             <motion.button key={s} onClick={() => setStatus(s)}
               whileTap={{ scale: 0.96 }}
               transition={{ duration: 0.15 }}
-              style={{ padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${status === s ? SC(s) + "60" : "#21262D"}`, background: status === s ? SB(s) : "#161B22", color: status === s ? SC(s) : "#8B949E", transition: "background 0.2s ease, border 0.2s ease, color 0.2s ease" }}>
+              style={{ padding: "9px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${status === s ? SC(s) + "60" : "#21262D"}`, background: status === s ? SB(s) : "#161B22", color: status === s ? SC(s) : "#8B949E", transition: "background 0.2s ease, border 0.2s ease, color 0.2s ease", whiteSpace: "nowrap" }}>
               {s}
             </motion.button>
           ))}
         </div>
       </Card>
+
+      {/* ── Quick Stats: Times Solved + Last Revised ── */}
       <Card>
-        <SectionTitle>Times Solved</SectionTitle>
-        <div style={{ display: "flex", gap: 8 }}>
-          {[1, 2, 3, 4].map(n => (
-            <button key={n} onClick={() => setTimesSolved(n)}
-              style={{ width: 40, height: 36, borderRadius: 8, border: `1px solid ${timesSolved === n ? "#A78BFA60" : "#21262D"}`, background: timesSolved === n ? "rgba(167,139,250,.12)" : "#161B22", color: timesSolved === n ? "#A78BFA" : "#8B949E", fontSize: 13, fontFamily: "monospace", cursor: "pointer" }}>
-              {n === 4 ? "4+" : n}
-            </button>
-          ))}
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontSize: 10, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8, fontWeight: 600 }}>Times Solved</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[1, 2, 3, 4].map(n => (
+                <button key={n} onClick={() => setTimesSolved(n)}
+                  style={{ flex: 1, height: 36, borderRadius: 8, border: `1px solid ${timesSolved === n ? "#A78BFA60" : "#21262D"}`, background: timesSolved === n ? "rgba(167,139,250,.12)" : "#161B22", color: timesSolved === n ? "#A78BFA" : "#8B949E", fontSize: 13, fontFamily: "monospace", cursor: "pointer", fontWeight: 700, transition: "all .15s" }}>
+                  {n === 4 ? "4+" : n}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontSize: 10, color: "#8B949E", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8, fontWeight: 600 }}>Last Revised</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: daysAgoColor(pr.lastRevised), padding: "7px 0" }}>{daysAgoLabel(pr.lastRevised)}</div>
+          </div>
         </div>
       </Card>
-      <Card>
-        <SectionTitle>Last Revised</SectionTitle>
-        <div style={{ fontSize: 14, fontWeight: 600, color: daysAgoColor(pr.lastRevised) }}>{daysAgoLabel(pr.lastRevised)}</div>
-      </Card>
+
+      {/* ── Revision Schedule ── */}
       {(pr.revisionHistory || []).length > 0 && (
         <Card>
           <SectionTitle>Spaced Repetition Schedule</SectionTitle>
@@ -2319,7 +2801,7 @@ function ProblemDetail({ problem, progress, onBack, onUpdate, onActivity }) {
               <motion.div key={r.stage}
                 animate={{ background: justDone ? "rgba(63,185,80,0.12)" : "rgba(63,185,80,0)" }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 0", fontSize: 13, borderBottom: "1px solid #21262D" }}>
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", fontSize: 13, borderBottom: "1px solid #21262D" }}>
                 <span style={{ color: "#8B949E" }}>Revision {r.stage} ({REVISION_OFFSETS[r.stage - 1]} days)</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <AnimatePresence mode="wait">
@@ -2345,6 +2827,8 @@ function ProblemDetail({ problem, progress, onBack, onUpdate, onActivity }) {
           })}
         </Card>
       )}
+
+      {/* ── Mistake Tags ── */}
       <Card>
         <SectionTitle>Mistake Tags</SectionTitle>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -2352,28 +2836,39 @@ function ProblemDetail({ problem, progress, onBack, onUpdate, onActivity }) {
             const on = tags.includes(tag);
             return (
               <button key={tag} onClick={() => setTags(t => on ? t.filter(x => x !== tag) : [...t, tag])}
-                style={{ padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: "pointer", border: `1px solid ${on ? "#F8514960" : "#21262D"}`, background: on ? "rgba(248,81,73,.1)" : "#161B22", color: on ? "#F85149" : "#484F58", transition: "all .15s" }}>
+                style={{ padding: "5px 12px", borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: "pointer", border: `1px solid ${on ? "#F8514960" : "#21262D"}`, background: on ? "rgba(248,81,73,.1)" : "#161B22", color: on ? "#F85149" : "#484F58", transition: "all .15s" }}>
                 {tag}
               </button>
             );
           })}
         </div>
       </Card>
-      <Card>
-        <SectionTitle>Personal Notes</SectionTitle>
-        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Your approach, edge cases, key insights…" rows={4} style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
-      </Card>
+
+      {/* ── Save Button ── */}
       <motion.button
         onClick={handleSave}
         animate={saved ? { scale: [1, 1.03, 1] } : { scale: 1 }}
         transition={{ duration: 0.32, ease: [0.34, 1.2, 0.64, 1] }}
-        style={{ padding: "11px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: `1px solid ${saved ? "#3FB95040" : "#A78BFA40"}`, background: saved ? "rgba(63,185,80,.12)" : "rgba(167,139,250,.12)", color: saved ? "#3FB950" : "#A78BFA", transition: "background 0.25s ease, border 0.25s ease, color 0.25s ease" }}>
+        style={{ padding: "12px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: `1px solid ${saved ? "#3FB95040" : "#A78BFA40"}`, background: saved ? "rgba(63,185,80,.12)" : "rgba(167,139,250,.12)", color: saved ? "#3FB950" : "#A78BFA", transition: "background 0.25s ease, border 0.25s ease, color 0.25s ease" }}>
         {saved ? "✓ Saved" : "Save Progress"}
       </motion.button>
+
+      {/* ── Modals ── */}
+      <NotesModal
+        isOpen={showNotes}
+        onClose={() => setShowNotes(false)}
+        problemName={problem.name}
+        notes={notes}
+        onSave={(text) => { setNotes(text); onUpdate(problem.id, { notes: text }); }}
+      />
+      <TestcaseModal
+        isOpen={showTestcases}
+        onClose={() => setShowTestcases(false)}
+        problem={problem}
+      />
     </motion.div>
   );
 }
-
 // ════════════════════════════════════════════════════════════════════════════
 // SMART STUDY TIMER
 // ════════════════════════════════════════════════════════════════════════════
@@ -3095,6 +3590,7 @@ export default function App() {
         ::-webkit-scrollbar-track{background:#0D1117}
         ::-webkit-scrollbar-thumb{background:#30363D;border-radius:3px}
         select option{background:#161B22;color:#E6EDF3}
+        pre{white-space:pre-wrap;word-break:break-word;margin:0}
         a{text-decoration:none}
         button{font-family:inherit}
         input,textarea,select{font-family:inherit}
