@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ════════════════════════════════════════════════════════════════════════════
 // TOPIC DATA
@@ -746,65 +746,53 @@ const loadAuth = () => { try { return JSON.parse(localStorage.getItem(AUTH_LS)) 
 
 function LoginGate({ onUnlock }) {
   const hasPassword = !!(loadAuth()?.hash);
-  const [mode, setMode] = useState(hasPassword ? "login" : "create");
+  const [mode] = useState(hasPassword ? "login" : "create");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   const submit = () => {
     if (mode === "create") {
-      if (pw.length < 4) { setError("Password must be at least 4 characters."); return; }
-      if (pw !== pw2) { setError("Passwords don't match."); return; }
+      if (pw.length < 8) { setError("Use at least 8 characters for your private passcode."); return; }
+      if (pw !== pw2) { setError("The passcodes do not match."); return; }
       try { localStorage.setItem(AUTH_LS, JSON.stringify({ hash: hashPassword(pw), createdAt: Date.now() })); } catch {}
       onUnlock();
     } else {
       const stored = loadAuth()?.hash;
-      if (hashPassword(pw) === stored) { onUnlock(); }
-      else { setError("Wrong password. Try again."); setPw(""); }
+      if (hashPassword(pw) === stored) onUnlock();
+      else { setError("Incorrect passcode. Your data remains safely locked."); setPw(""); }
     }
   };
 
   const inputStyle = {
-    width: "100%", background: "#161B22", border: "1px solid #30363D", borderRadius: 10,
-    color: "#E6EDF3", fontSize: 15, padding: "12px 14px", outline: "none",
+    width: "100%", background: "#0B0F14", border: "1px solid #30363D", borderRadius: 11,
+    color: "#E6EDF3", fontSize: 15, padding: "13px 14px", outline: "none",
   };
 
   return (
-    <div style={{
-      minHeight: "100vh", background: "#010409",
-      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
-      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif",
-    }}>
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        style={{ width: "100%", maxWidth: 380, background: "#0D1117", border: "1px solid #21262D", borderRadius: 16, padding: 32, boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: 40, marginBottom: 10 }}>🔐</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#E6EDF3" }}>A2Z Revision Hub</div>
-          <div style={{ fontSize: 13, color: "#8B949E", marginTop: 4 }}>
-            {mode === "create" ? "Create a password to protect your progress" : "Enter your password to continue"}
+    <div style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% -10%, #201641 0%, #0B0F14 42%, #010409 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" }}>
+      <motion.div initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        style={{ width: "100%", maxWidth: 410, background: "rgba(13,17,23,.92)", border: "1px solid rgba(167,139,250,.24)", borderRadius: 22, padding: "34px 32px 28px", boxShadow: "0 28px 100px rgba(0,0,0,.55), 0 0 60px rgba(124,58,237,.10)", backdropFilter: "blur(16px)" }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ width: 58, height: 58, margin: "0 auto 16px", borderRadius: 17, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#8B5CF6,#4F46E5)", boxShadow: "0 10px 28px rgba(124,58,237,.35)", fontSize: 28 }}>✦</div>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", color: "#F0F6FC" }}>A2Z Revision Hub</div>
+          <div style={{ fontSize: 13, color: "#8B949E", marginTop: 7 }}>{mode === "create" ? "Create your private study vault" : "Welcome back to your study vault"}</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: "#8B949E", textTransform: "uppercase", letterSpacing: ".08em" }}>Private passcode</label>
+          <div style={{ position: "relative" }}>
+            <input type={showPassword ? "text" : "password"} value={pw} onChange={e => { setPw(e.target.value); setError(""); }} onKeyDown={e => e.key === "Enter" && (mode === "login" || pw2) && submit()} placeholder={mode === "create" ? "Choose a passcode" : "Enter your passcode"} autoFocus style={{ ...inputStyle, paddingRight: 54 }} />
+            <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "Hide passcode" : "Show passcode"} style={{ position: "absolute", right: 8, top: 7, height: 34, width: 38, border: "none", borderRadius: 8, background: "transparent", color: "#8B949E", cursor: "pointer", fontSize: 16 }}>{showPassword ? "◉" : "◌"}</button>
           </div>
+          {mode === "create" && <>
+            <input type={showPassword ? "text" : "password"} value={pw2} onChange={e => { setPw2(e.target.value); setError(""); }} onKeyDown={e => e.key === "Enter" && submit()} placeholder="Confirm your passcode" style={inputStyle} />
+            <div style={{ fontSize: 11, color: pw.length >= 8 ? "#3FB950" : "#6E7681" }}>{pw.length >= 8 ? "✓ Strong enough for this personal vault" : "Use at least 8 characters"}</div>
+          </>}
+          {error && <div role="alert" style={{ fontSize: 12, lineHeight: 1.45, color: "#FFB4AB", background: "rgba(248,81,73,.09)", border: "1px solid rgba(248,81,73,.28)", borderRadius: 9, padding: "9px 12px" }}>{error}</div>}
+          <button onClick={submit} style={{ marginTop: 5, padding: "13px 0", borderRadius: 11, fontSize: 14, fontWeight: 750, cursor: "pointer", border: "1px solid rgba(196,181,253,.35)", background: "linear-gradient(135deg,#8B5CF6,#6366F1)", color: "#fff", boxShadow: "0 8px 22px rgba(99,102,241,.22)" }}>{mode === "create" ? "Create Vault & Continue" : "Unlock My Vault"}</button>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <input type="password" value={pw} onChange={e => { setPw(e.target.value); setError(""); }}
-            onKeyDown={e => e.key === "Enter" && (mode === "login" || pw2) && submit()}
-            placeholder="Password" autoFocus style={inputStyle} />
-          {mode === "create" && (
-            <input type="password" value={pw2} onChange={e => { setPw2(e.target.value); setError(""); }}
-              onKeyDown={e => e.key === "Enter" && submit()}
-              placeholder="Confirm password" style={inputStyle} />
-          )}
-          {error && <div style={{ fontSize: 12, color: "#F85149", background: "rgba(248,81,73,.08)", border: "1px solid rgba(248,81,73,.25)", borderRadius: 8, padding: "8px 12px" }}>{error}</div>}
-          <button onClick={submit}
-            style={{ marginTop: 4, padding: "12px 0", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", border: "1px solid #A78BFA40", background: "rgba(167,139,250,.12)", color: "#A78BFA" }}>
-            {mode === "create" ? "Create Password & Enter" : "Unlock"}
-          </button>
-          {mode === "login" && hasPassword && (
-            <button onClick={() => { if (window.confirm("Reset password? This cannot be undone.")) { try { localStorage.removeItem(AUTH_LS); } catch {} setMode("create"); setPw(""); setError(""); } }}
-              style={{ background: "none", border: "none", color: "#484F58", fontSize: 12, cursor: "pointer", marginTop: 4 }}>
-              Forgot password? Reset
-            </button>
-          )}
-        </div>
+        <div style={{ marginTop: 22, paddingTop: 16, borderTop: "1px solid #21262D", textAlign: "center", color: "#6E7681", fontSize: 11, lineHeight: 1.5 }}>Personal offline lock · Your progress stays in this browser<br />There is no password reset, so keep your passcode safe.</div>
       </motion.div>
     </div>
   );
@@ -837,7 +825,7 @@ function buildStudyPlan(progress, availability) {
       }
       if (!tasks.length && queue.length) tasks.push(queue.shift());
       days.push({
-        date: cursor.toISOString().slice(0, 10),
+        date: localDateKey(cursor),
         dow,
         tasks: tasks.map(t => t.id),
         est: tasks.reduce((a, t) => a + getEstMinutes(t), 0),
@@ -849,7 +837,15 @@ function buildStudyPlan(progress, availability) {
 }
 
 
-const todayKey = () => new Date().toISOString().slice(0, 10);
+// Calendar keys are intentionally local-date based. Using toISOString() here
+// shifted activity and plans to the previous/next day for some timezones.
+const localDateKey = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+const todayKey = () => localDateKey();
 
 const bumpActivity = (activity, dateKey = todayKey(), by = 1) => {
   const next = { ...activity, [dateKey]: (activity[dateKey] || 0) + by };
@@ -875,7 +871,7 @@ const buildHeatmap = (activity) => {
       const dt = new Date(start);
       dt.setDate(start.getDate() + w * 7 + d);
       const isFuture = dt > today;
-      const dateStr = dt.toISOString().slice(0, 10);
+      const dateStr = localDateKey(dt);
       const count = isFuture ? 0 : (activity[dateStr] || 0);
       week.push({ date: dateStr, count, isFuture });
     }
@@ -903,7 +899,7 @@ const REVISION_OFFSETS = [3, 10, 30];
 const addDays = (dateStr, days) => {
   const d = new Date(dateStr);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localDateKey(d);
 };
 
 const buildRevisionHistory = (solvedDate) => REVISION_OFFSETS.map((days, i) => ({
@@ -978,7 +974,7 @@ const computeStreak = (activity) => {
   if (!hasToday) cursor.setDate(cursor.getDate() - 1);
   let streak = 0;
   while (true) {
-    const key = cursor.toISOString().slice(0, 10);
+    const key = localDateKey(cursor);
     if ((activity[key] || 0) > 0) { streak++; cursor.setDate(cursor.getDate() - 1); }
     else break;
   }
@@ -1006,12 +1002,12 @@ const computeSummary = (progress, activity, days) => {
   const today = new Date();
   const cutoff = new Date(today);
   cutoff.setDate(cutoff.getDate() - (days - 1));
-  const cutoffKey = cutoff.toISOString().slice(0, 10);
+  const cutoffKey = localDateKey(cutoff);
   let totalActivity = 0;
   for (let i = 0; i < days; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    totalActivity += activity[d.toISOString().slice(0, 10)] || 0;
+    totalActivity += activity[localDateKey(d)] || 0;
   }
   const solvedInWindow = [];
   const revisedInWindow = [];
@@ -1091,7 +1087,7 @@ function useCountUp(target, duration = 1200, trigger = true) {
       if (progress < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
-  }, [target, trigger]);
+  }, [target, duration, trigger]);
   return val;
 }
 
@@ -1121,13 +1117,6 @@ const modalPanelVariants = {
   hidden: { opacity: 0, scale: 0.94, y: 16 },
   show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.28, ease: [0.34, 1.2, 0.64, 1] } },
   exit: { opacity: 0, scale: 0.96, y: 8, transition: { duration: 0.18, ease: "easeIn" } },
-};
-
-// Page/section switch — quick fade + tiny slide, never more than ~250ms
-const pageTransitionVariants = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } },
-  exit: { opacity: 0, y: -6, transition: { duration: 0.15, ease: "easeIn" } },
 };
 
 // Card hover — translateY(-4px) + soft glow, per spec
@@ -3037,7 +3026,7 @@ function playFocusEndSound() {
       g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 1.2);
       o2.start(ctx.currentTime + delay); o2.stop(ctx.currentTime + delay + 1.3);
     });
-  } catch (e) {}
+  } catch {}
 }
 
 function playBreakEndSound() {
@@ -3052,7 +3041,7 @@ function playBreakEndSound() {
       g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.55);
       o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + 0.6);
     });
-  } catch (e) {}
+  } catch {}
 }
 
 function playCompleteSound() {
@@ -3067,7 +3056,7 @@ function playCompleteSound() {
       g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + (freq > 800 ? 1.2 : 0.35));
       o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + 1.3);
     });
-  } catch (e) {}
+  } catch {}
 }
 
 function playTickSound() {
@@ -3080,7 +3069,7 @@ function playTickSound() {
     g.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.01);
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
     o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.1);
-  } catch (e) {}
+  } catch {}
 }
 
 function loadTimerState() { try { const s = localStorage.getItem(TIMER_LS); return s ? JSON.parse(s) : null; } catch { return null; } }
@@ -3410,10 +3399,10 @@ function StudyTimer({ onBumpActivity }) {
 const PLANNER_KEY = "dsa_daily_planner_v1";
 function loadPlanner() { try { const s = localStorage.getItem(PLANNER_KEY); return s ? JSON.parse(s) : { tasks: [], history: [] }; } catch { return { tasks: [], history: [] }; } }
 function savePlanner(data) { try { localStorage.setItem(PLANNER_KEY, JSON.stringify(data)); } catch {} }
-function formatDate(iso) { const d = new Date(iso); return d.toLocaleDateString("en-US", { day: "numeric", month: "long" }); }
+function formatDate(iso) { const d = new Date(`${iso}T12:00:00`); return d.toLocaleDateString("en-US", { day: "numeric", month: "long" }); }
 
 function DailyPlanner() {
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = todayKey();
   const [data, setData] = useState(() => {
     const saved = loadPlanner();
     const carryForward = [], completedOld = [];
@@ -3582,9 +3571,13 @@ function PlanPage({ progress, onSelectProblem }) {
 
   const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const remaining = ALL_PROBLEMS.filter(p => !["Solved", "Revised"].includes(progress[p.id]?.status));
+  const dueRevisions = ALL_PROBLEMS.filter(p => (progress[p.id]?.revisionHistory || []).some(r => !r.done && r.dueDate <= todayKey()));
   const totalMins = remaining.reduce((a, p) => a + getEstMinutes(p), 0);
   const weeklyMins = Object.values(availability).reduce((a, b) => a + Number(b), 0) * 60;
   const estDays = weeklyMins > 0 ? Math.ceil(totalMins / (weeklyMins / 7)) : null;
+  const planDone = plan?.days?.flatMap(day => day.tasks).filter(id => ["Solved", "Revised"].includes(progress[id]?.status)).length || 0;
+  const planTotal = plan?.days?.reduce((sum, day) => sum + day.tasks.length, 0) || 0;
+  const planPct = planTotal ? Math.round((planDone / planTotal) * 100) : 0;
 
   const generate = () => {
     const days = buildStudyPlan(progress, availability);
@@ -3592,7 +3585,9 @@ function PlanPage({ progress, onSelectProblem }) {
     try { localStorage.setItem(PLAN_LS, JSON.stringify(p)); } catch {}
     setPlan(p); setOpenSprint(0);
   };
-  const discard = () => { try { localStorage.removeItem(PLAN_LS); } catch {} setPlan(null); };
+  // Do not delete an existing plan: rebuilding replaces it only after the
+  // user explicitly presses Generate, preserving all progress data.
+  const rebuild = () => generate();
 
   const sprints = useMemo(() => {
     if (!plan) return [];
@@ -3624,6 +3619,22 @@ function PlanPage({ progress, onSelectProblem }) {
         <p style={{ fontSize: 13, color: "#8B949E" }}>Set your weekly availability — we will schedule every unsolved problem into daily sprints, Planly-style.</p>
       </div>
 
+      {plan && (
+        <Card style={{ padding: "14px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 12, color: "#8B949E" }}>Current plan · generated {plan.createdAt}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#E6EDF3", marginTop: 3 }}>{planDone} / {planTotal} planned problems complete</div>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: planPct === 100 ? "#3FB950" : "#A78BFA", fontFamily: "monospace" }}>{planPct}%</div>
+          </div>
+          <div style={{ height: 6, marginTop: 10, background: "#21262D", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${planPct}%`, background: planPct === 100 ? "#3FB950" : "linear-gradient(90deg,#8B5CF6,#6366F1)", borderRadius: 99, transition: "width .3s" }} />
+          </div>
+          {dueRevisions.length > 0 && <div style={{ marginTop: 10, color: "#F59E0B", fontSize: 12 }}>⚠ {dueRevisions.length} revision{dueRevisions.length === 1 ? "" : "s"} due — revise these before taking on new work.</div>}
+        </Card>
+      )}
+
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
           <SectionTitle>Weekly Availability</SectionTitle>
@@ -3645,7 +3656,7 @@ function PlanPage({ progress, onSelectProblem }) {
         <Card>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
             <SectionTitle>Sprint Preview — {sprints.length} sprint{sprints.length > 1 ? "s" : ""}</SectionTitle>
-            <button onClick={discard} style={{ fontSize: 12, color: "#F85149", background: "none", border: "none", cursor: "pointer" }}>Discard plan</button>
+            <button onClick={rebuild} style={{ fontSize: 12, color: "#A78BFA", background: "none", border: "1px solid #A78BFA40", borderRadius: 7, padding: "5px 9px", cursor: "pointer" }}>↻ Rebuild plan</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {sprints.map((sp, si) => (
