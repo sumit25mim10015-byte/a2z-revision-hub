@@ -723,6 +723,131 @@ const loadProfile = () => {
   }
 };
 const saveProfile = (d) => { try { localStorage.setItem(PROFILE_LS, JSON.stringify(d)); } catch {} };
+// ════════════════════════════════════════════════════════════════════════════
+// SIMPLE PASSWORD GATE (client-side, localStorage only)
+// Note: this is a personal-tracker lock, not real security.
+// ════════════════════════════════════════════════════════════════════════════
+const AUTH_LS = "dsa_auth_v1";
+const AUTH_SESSION = "dsa_auth_session_v1";
+
+function hashPassword(str) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(16) + (h1 >>> 0).toString(16);
+}
+
+const loadAuth = () => { try { return JSON.parse(localStorage.getItem(AUTH_LS)) || null; } catch { return null; } };
+
+function LoginGate({ onUnlock }) {
+  const hasPassword = !!(loadAuth()?.hash);
+  const [mode, setMode] = useState(hasPassword ? "login" : "create");
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [error, setError] = useState("");
+
+  const submit = () => {
+    if (mode === "create") {
+      if (pw.length < 4) { setError("Password must be at least 4 characters."); return; }
+      if (pw !== pw2) { setError("Passwords don't match."); return; }
+      try { localStorage.setItem(AUTH_LS, JSON.stringify({ hash: hashPassword(pw), createdAt: Date.now() })); } catch {}
+      onUnlock();
+    } else {
+      const stored = loadAuth()?.hash;
+      if (hashPassword(pw) === stored) { onUnlock(); }
+      else { setError("Wrong password. Try again."); setPw(""); }
+    }
+  };
+
+  const inputStyle = {
+    width: "100%", background: "#161B22", border: "1px solid #30363D", borderRadius: 10,
+    color: "#E6EDF3", fontSize: 15, padding: "12px 14px", outline: "none",
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#010409",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif",
+    }}>
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        style={{ width: "100%", maxWidth: 380, background: "#0D1117", border: "1px solid #21262D", borderRadius: 16, padding: 32, boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>🔐</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#E6EDF3" }}>A2Z Revision Hub</div>
+          <div style={{ fontSize: 13, color: "#8B949E", marginTop: 4 }}>
+            {mode === "create" ? "Create a password to protect your progress" : "Enter your password to continue"}
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <input type="password" value={pw} onChange={e => { setPw(e.target.value); setError(""); }}
+            onKeyDown={e => e.key === "Enter" && (mode === "login" || pw2) && submit()}
+            placeholder="Password" autoFocus style={inputStyle} />
+          {mode === "create" && (
+            <input type="password" value={pw2} onChange={e => { setPw2(e.target.value); setError(""); }}
+              onKeyDown={e => e.key === "Enter" && submit()}
+              placeholder="Confirm password" style={inputStyle} />
+          )}
+          {error && <div style={{ fontSize: 12, color: "#F85149", background: "rgba(248,81,73,.08)", border: "1px solid rgba(248,81,73,.25)", borderRadius: 8, padding: "8px 12px" }}>{error}</div>}
+          <button onClick={submit}
+            style={{ marginTop: 4, padding: "12px 0", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", border: "1px solid #A78BFA40", background: "rgba(167,139,250,.12)", color: "#A78BFA" }}>
+            {mode === "create" ? "Create Password & Enter" : "Unlock"}
+          </button>
+          {mode === "login" && hasPassword && (
+            <button onClick={() => { if (window.confirm("Reset password? This cannot be undone.")) { try { localStorage.removeItem(AUTH_LS); } catch {} setMode("create"); setPw(""); setError(""); } }}
+              style={{ background: "none", border: "none", color: "#484F58", fontSize: 12, cursor: "pointer", marginTop: 4 }}>
+              Forgot password? Reset
+            </button>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PLANLY-STYLE STUDY PLAN ENGINE
+// ════════════════════════════════════════════════════════════════════════════
+const PLAN_LS = "dsa_plan_v1";
+const EST_MINUTES = { Easy: 8, Medium: 18, Hard: 35 };
+const getEstMinutes = (p) => EST_MINUTES[p.difficulty] || 15;
+const fmtHM = (mins) => `${Math.floor(mins / 60)}h ${mins % 60}m`;
+
+// availability: { 0: hoursSun, 1: hoursMon, ... 6: hoursSat }
+function buildStudyPlan(progress, availability) {
+  const queue = ALL_PROBLEMS.filter(p => !["Solved", "Revised"].includes(progress[p.id]?.status));
+  const days = [];
+  const cursor = new Date();
+  let guard = 0;
+  while (queue.length && guard < 4000) {
+    guard++;
+    const dow = cursor.getDay();
+    const dailyMins = (Number(availability[dow]) || 0) * 60;
+    if (dailyMins > 0) {
+      let budget = dailyMins;
+      const tasks = [];
+      while (queue.length && getEstMinutes(queue[0]) <= budget) {
+        budget -= getEstMinutes(queue[0]);
+        tasks.push(queue.shift());
+      }
+      if (!tasks.length && queue.length) tasks.push(queue.shift());
+      days.push({
+        date: cursor.toISOString().slice(0, 10),
+        dow,
+        tasks: tasks.map(t => t.id),
+        est: tasks.reduce((a, t) => a + getEstMinutes(t), 0),
+      });
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -3444,11 +3569,158 @@ function DailyPlanner() {
   );
 }
 
+
+// ════════════════════════════════════════════════════════════════════════════
+// MY PLAN PAGE (Planly-style)
+// ════════════════════════════════════════════════════════════════════════════
+function PlanPage({ progress, onSelectProblem }) {
+  const savedPlan = (() => { try { return JSON.parse(localStorage.getItem(PLAN_LS)) || null; } catch { return null; } })();
+  const [availability, setAvailability] = useState(savedPlan?.availability || { 0: 2, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 2 });
+  const [plan, setPlan] = useState(savedPlan);
+  const [openSprint, setOpenSprint] = useState(savedPlan ? 0 : null);
+  const [openDay, setOpenDay] = useState({});
+
+  const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const remaining = ALL_PROBLEMS.filter(p => !["Solved", "Revised"].includes(progress[p.id]?.status));
+  const totalMins = remaining.reduce((a, p) => a + getEstMinutes(p), 0);
+  const weeklyMins = Object.values(availability).reduce((a, b) => a + Number(b), 0) * 60;
+  const estDays = weeklyMins > 0 ? Math.ceil(totalMins / (weeklyMins / 7)) : null;
+
+  const generate = () => {
+    const days = buildStudyPlan(progress, availability);
+    const p = { availability, days, createdAt: todayKey() };
+    try { localStorage.setItem(PLAN_LS, JSON.stringify(p)); } catch {}
+    setPlan(p); setOpenSprint(0);
+  };
+  const discard = () => { try { localStorage.removeItem(PLAN_LS); } catch {} setPlan(null); };
+
+  const sprints = useMemo(() => {
+    if (!plan) return [];
+    const out = [];
+    for (let i = 0; i < plan.days.length; i += 7) out.push(plan.days.slice(i, i + 7));
+    return out.map(days => ({
+      days,
+      est: days.reduce((a, d) => a + d.est, 0),
+      done: days.every(d => d.tasks.every(id => ["Solved", "Revised"].includes(progress[id]?.status))),
+    }));
+  }, [plan, progress]);
+
+  const sliderRow = (dow) => (
+    <div key={dow} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#161B22", borderRadius: 10, border: "1px solid #21262D" }}>
+      <span style={{ width: 90, fontSize: 13, fontWeight: 600, color: "#C9D1D9", flexShrink: 0 }}>{DAY_NAMES[dow]}</span>
+      <input type="range" min={0} max={8} step={0.5} value={availability[dow]}
+        onChange={e => setAvailability(a => ({ ...a, [dow]: Number(e.target.value) }))}
+        style={{ flex: 1, accentColor: "#A78BFA" }} />
+      <span style={{ width: 56, textAlign: "right", fontSize: 12, fontFamily: "monospace", color: "#A78BFA", flexShrink: 0 }}>
+        {availability[dow]}h
+      </span>
+    </div>
+  );
+
+  return (
+    <motion.div variants={staggerContainer} initial="hidden" animate="show" style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 720, margin: "0 auto" }}>
+      <div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#E6EDF3", marginBottom: 4 }}>🗓 My Study Plan</h2>
+        <p style={{ fontSize: 13, color: "#8B949E" }}>Set your weekly availability — we will schedule every unsolved problem into daily sprints, Planly-style.</p>
+      </div>
+
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+          <SectionTitle>Weekly Availability</SectionTitle>
+          <span style={{ fontSize: 12, fontFamily: "monospace", color: "#E6EDF3" }}>
+            Est. finish: <span style={{ color: "#A78BFA", fontWeight: 700 }}>{estDays ? `~${estDays} days` : "—"}</span>
+            <span style={{ color: "#484F58" }}> · {fmtHM(totalMins)} left · {remaining.length} problems</span>
+          </span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+          {[1, 2, 3, 4, 5, 6, 0].map(sliderRow)}
+        </div>
+        <button onClick={generate}
+          style={{ width: "100%", padding: "12px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid #A78BFA40", background: "rgba(167,139,250,.12)", color: "#A78BFA" }}>
+          ⚡ Generate My Plan
+        </button>
+      </Card>
+
+      {plan && sprints.length > 0 && (
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+            <SectionTitle>Sprint Preview — {sprints.length} sprint{sprints.length > 1 ? "s" : ""}</SectionTitle>
+            <button onClick={discard} style={{ fontSize: 12, color: "#F85149", background: "none", border: "none", cursor: "pointer" }}>Discard plan</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {sprints.map((sp, si) => (
+              <div key={si} style={{ border: "1px solid #21262D", borderRadius: 10, overflow: "hidden", background: "#161B22" }}>
+                <button onClick={() => setOpenSprint(openSprint === si ? null : si)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#0D1117", background: sp.done ? "#3FB950" : "#A78BFA", borderRadius: 6, padding: "3px 8px" }}>
+                    Sprint {si + 1}{sp.done ? " ✓" : ""}
+                  </span>
+                  <span style={{ flex: 1, fontSize: 12, color: "#8B949E" }}>{sp.days[0].date} → {sp.days[sp.days.length - 1].date}</span>
+                  <span style={{ fontSize: 12, fontFamily: "monospace", color: "#8B949E" }}>{fmtHM(sp.est)}</span>
+                  <span style={{ color: "#484F58", fontSize: 11, transform: openSprint === si ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▼</span>
+                </button>
+                {openSprint === si && (
+                  <div style={{ borderTop: "1px solid #21262D" }}>
+                    {sp.days.map((day) => {
+                      const allDone = day.tasks.every(id => ["Solved", "Revised"].includes(progress[id]?.status));
+                      const isToday = day.date === todayKey();
+                      const isOpen = openDay[day.date];
+                      return (
+                        <div key={day.date} style={{ borderBottom: "1px solid #0D1117" }}>
+                          <button onClick={() => setOpenDay(o => ({ ...o, [day.date]: !o[day.date] }))}
+                            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: isToday ? "rgba(167,139,250,.06)" : "none", border: "none", cursor: "pointer", textAlign: "left" }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: allDone ? "#3FB950" : isToday ? "#A78BFA" : "#C9D1D9" }}>
+                              {isToday ? "📍 " : ""}{DAY_NAMES[day.dow].slice(0, 3)} {day.date.slice(5)}
+                            </span>
+                            {allDone && <span style={{ fontSize: 11, color: "#3FB950" }}>✓ done</span>}
+                            <span style={{ flex: 1 }} />
+                            <span style={{ fontSize: 11, fontFamily: "monospace", color: "#8B949E" }}>{fmtHM(day.est)}</span>
+                            <span style={{ color: "#484F58", fontSize: 10, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▼</span>
+                          </button>
+                          {isOpen && (
+                            <div style={{ margin: "0 10px 8px", borderRadius: 8, border: "1px solid #21262D", overflow: "hidden" }}>
+                              {day.tasks.map(id => {
+                                const p = ALL_PROBLEMS.find(x => x.id === id);
+                                if (!p) return null;
+                                const done = ["Solved", "Revised"].includes(progress[id]?.status);
+                                return (
+                                  <div key={id} onClick={() => onSelectProblem(p)}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderBottom: "1px solid #21262D", cursor: "pointer", background: done ? "rgba(63,185,80,.05)" : "transparent" }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.02)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = done ? "rgba(63,185,80,.05)" : "transparent"}>
+                                    <span style={{ fontSize: 12, color: done ? "#3FB950" : "#484F58", width: 14 }}>{done ? "✓" : "○"}</span>
+                                    <span style={{ flex: 1, fontSize: 12.5, color: done ? "#8B949E" : "#C9D1D9", textDecoration: done ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                                    <DiffBadge d={p.difficulty} />
+                                    <span style={{ fontSize: 11, fontFamily: "monospace", color: "#8B949E", width: 44, textAlign: "right" }}>{getEstMinutes(p)}m</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {plan && sprints.length === 0 && (
+        <Card><p style={{ fontSize: 13, color: "#3FB950", textAlign: "center", margin: 0 }}>🎉 Nothing left to plan — you have solved the entire sheet!</p></Card>
+      )}
+    </motion.div>
+  );
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // NAV
 // ════════════════════════════════════════════════════════════════════════════
 const NAV = [
   { id: "dashboard", label: "Dashboard",     icon: "⬡" },
+  { id: "plan",      label: "🗓 My Plan",    icon: "" },
   { id: "roadmap",   label: "A2Z Roadmap",   icon: "◈" },
   { id: "problems",  label: "Problems",       icon: "≡" },
   { id: "practice",  label: "🎲 Practice",   icon: "" },
@@ -3469,12 +3741,19 @@ export default function App() {
   const [profile, setProfile] = useState(loadProfile);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [unlocked, setUnlocked] = useState(() => { try { return sessionStorage.getItem(AUTH_SESSION) === "1"; } catch { return false; } });
 
   useEffect(() => { save(progress); }, [progress]);
   useEffect(() => { saveActivity(activity); }, [activity]);
   useEffect(() => { savePractice(practice); }, [practice]);
   useEffect(() => { saveSettings(settings); }, [settings]);
   useEffect(() => { saveProfile(profile); }, [profile]);
+
+  const logout = () => { try { sessionStorage.removeItem(AUTH_SESSION); } catch {} setUnlocked(false); };
+
+  if (!unlocked) {
+    return <LoginGate onUnlock={() => { try { sessionStorage.setItem(AUTH_SESSION, "1"); } catch {} setUnlocked(true); }} />;
+  }
 
   const updateProgress = (id, data) => setProgress(p => ({ ...p, [id]: { ...(p[id] || {}), ...data } }));
   const bumpActivityState = (dateKey, by = 1) => setActivity(a => bumpActivity(a, dateKey, by));
@@ -3647,6 +3926,12 @@ export default function App() {
           <span style={{ fontSize: 14, fontWeight: 600, color: "#E6EDF3", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {selected ? selected.name : NAV.find(n => n.id === page)?.label}
           </span>
+          {/* Lock button */}
+          <button onClick={logout} title="Lock app"
+            style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid #21262D", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            🔒
+          </button>
+
           {/* Profile button in topbar */}
           <button onClick={() => setProfileOpen(true)}
             style={{ width: 32, height: 32, borderRadius: 8, background: `${profile.avatarColor}18`, border: `1px solid ${profile.avatarColor}40`, color: "#E6EDF3", fontSize: 11, fontWeight: 800, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -3667,6 +3952,7 @@ export default function App() {
                 : page === "problems" ? <ProblemList progress={progress} onSelect={p => setSelected(p)} />
                   : page === "practice" ? <PracticeMode progress={progress} practice={practice} setPractice={setPractice} onSelectProblem={p => setSelected(p)} />
                     : page === "timer" ? <StudyTimer onBumpActivity={() => bumpActivityState(todayKey())} />
+                    : page === "plan" ? <PlanPage progress={progress} onSelectProblem={p => setSelected(p)} />
                     : page === "planner" ? <DailyPlanner />
                     : null
           }
